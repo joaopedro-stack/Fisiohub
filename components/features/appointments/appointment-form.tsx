@@ -162,7 +162,8 @@ export function AppointmentForm({ appointment, defaultDate, onSuccess }: Appoint
     watch,
     formState: { errors, isSubmitting },
   } = useForm<AppointmentFormData>({
-    resolver: zodResolver(appointmentSchema),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(appointmentSchema) as any,
     defaultValues: {
       patientId: appointment?.patientId ?? '',
       physiotherapistId: appointment?.physiotherapistId ?? '',
