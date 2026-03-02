@@ -8,7 +8,8 @@ function extractSlug(host: string): string | null {
   if (
     hostname === 'localhost' ||
     hostname === 'fisiohub.com.br' ||
-    hostname === 'www.fisiohub.com.br'
+    hostname === 'www.fisiohub.com.br' ||
+    hostname === 'fisiohub.vercel.app'
   ) {
     return null
   }
