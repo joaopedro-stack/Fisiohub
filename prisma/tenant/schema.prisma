@@ -1,0 +1,279 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../generated/tenant"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("TENANT_DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  PHYSIOTHERAPIST
+  RECEPTIONIST
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum AppointmentType {
+  INITIAL_EVALUATION
+  FOLLOW_UP
+  DISCHARGE
+  RETURN
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  INSURANCE
+  WAIVED
+}
+
+enum PaymentMethod {
+  CASH
+  PIX
+  CARD
+  INSURANCE
+  OTHER
+}
+
+enum InvoiceStatus {
+  OPEN
+  PAID
+  OVERDUE
+  CANCELED
+}
+
+enum InsuranceStatus {
+  BILLED
+  RECEIVED
+  PARTIAL
+  GLOSA
+}
+
+enum ExpenseCategory {
+  RENT
+  SALARY
+  SUPPLIES
+  EQUIPMENT
+  UTILITIES
+  MARKETING
+  TAXES
+  OTHER
+}
+
+enum ExpenseStatus {
+  PENDING
+  PAID
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  STATUS_CHANGE
+}
+
+model User {
+  id             String          @id @default(cuid())
+  email          String          @unique
+  password       String
+  name           String
+  role           UserRole        @default(PHYSIOTHERAPIST)
+  phone          String?
+  avatar         String?
+  isActive       Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  appointments   Appointment[]   @relation("PhysiotherapistAppointments")
+  sessions       Session[]       @relation("PhysiotherapistSessions")
+  patients       Patient[]
+}
+
+model Patient {
+  id                String        @id @default(cuid())
+  name              String
+  email             String?
+  phone             String?
+  cpf               String?       @unique
+  birthDate         DateTime?
+  gender            Gender?
+  address           String?
+  healthInsurance   String?
+  emergencyContact  String?
+  notes             String?
+  isActive          Boolean       @default(true)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  physiotherapistId String?
+  physiotherapist   User?         @relation(fields: [physiotherapistId], references: [id])
+  appointments      Appointment[]
+  sessions          Session[]
+  anamnesis         Anamnesis?
+  invoices          Invoice[]
+}
+
+model Room {
+  id           String        @id @default(cuid())
+  name         String
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  appointments Appointment[]
+}
+
+model Appointment {
+  id                String            @id @default(cuid())
+  patientId         String
+  physiotherapistId String
+  roomId            String?
+  invoiceId         String?
+  startTime         DateTime
+  endTime           DateTime
+  status            AppointmentStatus @default(SCHEDULED)
+  type              AppointmentType   @default(FOLLOW_UP)
+  notes             String?
+  paymentStatus     PaymentStatus     @default(PENDING)
+  paymentMethod     PaymentMethod?
+  paymentValue      Decimal?          @db.Decimal(10, 2)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  patient           Patient           @relation(fields: [patientId], references: [id])
+  physiotherapist   User              @relation("PhysiotherapistAppointments", fields: [physiotherapistId], references: [id])
+  room              Room?             @relation(fields: [roomId], references: [id])
+  invoice           Invoice?          @relation(fields: [invoiceId], references: [id])
+  session           Session?
+}
+
+model Session {
+  id                String   @id @default(cuid())
+  appointmentId     String   @unique
+  patientId         String
+  physiotherapistId String
+  sessionNumber     Int      @default(1)
+  techniques        String[]
+  notes             String?
+  evolution         String?
+  painLevel         Int?
+  startTime         DateTime
+  endTime           DateTime
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  appointment       Appointment @relation(fields: [appointmentId], references: [id])
+  patient           Patient     @relation(fields: [patientId], references: [id])
+  physiotherapist   User        @relation("PhysiotherapistSessions", fields: [physiotherapistId], references: [id])
+}
+
+model Anamnesis {
+  id             String   @id @default(cuid())
+  patientId      String   @unique
+  chiefComplaint String?
+  history        String?
+  medications    String?
+  allergies      String?
+  surgeries      String?
+  familyHistory  String?
+  lifestyle      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  patient        Patient  @relation(fields: [patientId], references: [id])
+}
+
+model ClinicSettings {
+  id              String   @id @default(cuid())
+  sessionDuration Int      @default(60)
+  openingTime     String   @default("08:00")
+  closingTime     String   @default("18:00")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Invoice {
+  id                      String            @id @default(cuid())
+  patientId               String
+  totalAmount             Decimal           @db.Decimal(10, 2)
+  issuedAt                DateTime          @default(now())
+  dueDate                 DateTime?
+  paidAt                  DateTime?
+  status                  InvoiceStatus     @default(OPEN)
+  notes                   String?
+  isInsurance             Boolean           @default(false)
+  insuranceBilledAmount   Decimal?          @db.Decimal(10, 2)
+  insuranceExpectedAmount Decimal?          @db.Decimal(10, 2)
+  insuranceReceivedAmount Decimal?          @db.Decimal(10, 2)
+  insuranceStatus         InsuranceStatus?
+  createdAt               DateTime          @default(now())
+  updatedAt               DateTime          @updatedAt
+  patient                 Patient           @relation(fields: [patientId], references: [id])
+  appointments            Appointment[]
+  payments                Payment[]
+
+  @@index([patientId])
+  @@index([status])
+  @@index([issuedAt])
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  invoiceId     String
+  amount        Decimal       @db.Decimal(10, 2)
+  method        PaymentMethod
+  paidAt        DateTime      @default(now())
+  transactionId String?
+  fees          Decimal?      @db.Decimal(10, 2)
+  isRefund      Boolean       @default(false)
+  notes         String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  invoice       Invoice       @relation(fields: [invoiceId], references: [id])
+
+  @@index([invoiceId])
+  @@index([paidAt])
+}
+
+model Expense {
+  id              String          @id @default(cuid())
+  description     String
+  category        ExpenseCategory
+  amount          Decimal         @db.Decimal(10, 2)
+  dueDate         DateTime
+  paidAt          DateTime?
+  status          ExpenseStatus   @default(PENDING)
+  isRecurring     Boolean         @default(false)
+  recurrenceRule  String?
+  parentExpenseId String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  parentExpense   Expense?        @relation("RecurringExpenses", fields: [parentExpenseId], references: [id])
+  childExpenses   Expense[]       @relation("RecurringExpenses")
+
+  @@index([status])
+  @@index([dueDate])
+}
+
+model FinancialAuditLog {
+  id         String      @id @default(cuid())
+  entityType String
+  entityId   String
+  action     AuditAction
+  oldValue   Json?
+  newValue   Json?
+  changedBy  String
+  changedAt  DateTime    @default(now())
+
+  @@index([entityType, entityId])
+}
