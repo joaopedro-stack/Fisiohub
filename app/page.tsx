@@ -4,7 +4,6 @@ import Link from 'next/link'
 
 export default async function HomePage() {
   const session = await auth()
-
   if (session) {
     if (session.user.role === 'SUPER_ADMIN') redirect('/admin')
     redirect('/dashboard')
@@ -13,589 +12,608 @@ export default async function HomePage() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Syne:wght@400;500;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300;12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&display=swap');
 
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         :root {
-          --cream: #F4EFE6;
-          --cream-dark: #EDE6D9;
-          --forest: #1A3329;
-          --forest-mid: #2D5542;
-          --forest-light: #4A8C6A;
-          --gold: #C8922A;
-          --gold-light: #E8B84B;
-          --sage: #8FB89A;
-          --text: #111A15;
-          --muted: #6B7D73;
-          --white: #FDFAF6;
+          --ink:      #0B1C13;
+          --ink-soft: #344B3C;
+          --muted:    #718C7C;
+          --border:   #D6E4DC;
+          --surface:  #F2F7F4;
+          --white:    #FFFFFF;
+          --green:    #1A6B3C;
+          --green-2:  #2D9459;
+          --green-3:  #5FBF86;
+          --lime:     #C6F135;
+          --gold:     #E8A835;
+          --dark:     #07140E;
         }
 
-        .lp { font-family: 'Syne', sans-serif; background: var(--cream); color: var(--text); overflow-x: hidden; }
-        .serif { font-family: 'DM Serif Display', serif; }
+        .lp { font-family: 'Bricolage Grotesque', sans-serif; background: var(--white); color: var(--ink); -webkit-font-smoothing: antialiased; }
 
-        /* ── Header ── */
-        .header {
-          position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+        /* ─── HEADER ─── */
+        .nav {
+          position: fixed; inset: 0 0 auto 0; z-index: 100;
           display: flex; align-items: center; justify-content: space-between;
-          padding: 20px 48px;
-          background: rgba(244,239,230,0.85);
-          backdrop-filter: blur(16px);
-          border-bottom: 1px solid rgba(26,51,41,0.08);
+          padding: 0 56px; height: 68px;
+          background: rgba(255,255,255,0.9);
+          backdrop-filter: blur(20px) saturate(1.8);
+          border-bottom: 1px solid var(--border);
         }
-        .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
-        .logo-mark {
-          width: 36px; height: 36px; background: var(--forest);
-          border-radius: 10px; display: flex; align-items: center; justify-content: center;
+        .nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+        .nav-logo-icon {
+          width: 34px; height: 34px; border-radius: 9px; background: var(--ink);
+          display: flex; align-items: center; justify-content: center; flex-shrink: 0;
         }
-        .logo-mark svg { width: 20px; height: 20px; }
-        .logo-text { font-size: 18px; font-weight: 700; color: var(--text); letter-spacing: -0.5px; }
-        .logo-text span { color: var(--forest-light); }
-        .header-actions { display: flex; align-items: center; gap: 12px; }
-        .btn-ghost {
-          padding: 9px 20px; border-radius: 8px; font-size: 14px; font-weight: 600;
-          color: var(--forest); text-decoration: none; border: 1.5px solid transparent;
-          transition: all 0.2s; font-family: 'Syne', sans-serif; cursor: pointer;
-          background: transparent;
+        .nav-logo-icon svg { width: 17px; height: 17px; }
+        .nav-logo-name { font-size: 17px; font-weight: 800; color: var(--ink); letter-spacing: -0.5px; }
+        .nav-logo-name b { color: var(--green-2); }
+        .nav-right { display: flex; align-items: center; gap: 10px; }
+        .nav-plans-btn {
+          display: flex; align-items: center; gap: 7px;
+          padding: 8px 18px; border-radius: 8px; font-size: 14px; font-weight: 600;
+          color: var(--ink-soft); text-decoration: none; border: 1.5px solid var(--border);
+          font-family: inherit; background: var(--white); cursor: pointer;
+          transition: all .18s;
         }
-        .btn-ghost:hover { border-color: var(--forest); background: rgba(26,51,41,0.06); }
-        .btn-primary {
-          padding: 9px 22px; border-radius: 8px; font-size: 14px; font-weight: 600;
-          background: var(--forest); color: var(--white); text-decoration: none;
-          transition: all 0.2s; font-family: 'Syne', sans-serif; border: 1.5px solid var(--forest);
-          display: flex; align-items: center; gap: 6px;
+        .nav-plans-btn:hover { border-color: var(--green-3); color: var(--green); }
+        .nav-enter-btn {
+          display: flex; align-items: center; gap: 7px;
+          padding: 9px 20px; border-radius: 8px; font-size: 14px; font-weight: 700;
+          color: var(--white); background: var(--green); border: none;
+          text-decoration: none; font-family: inherit; transition: all .18s;
         }
-        .btn-primary:hover { background: var(--forest-mid); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(26,51,41,0.25); }
-        .btn-plans {
-          padding: 9px 20px; border-radius: 8px; font-size: 14px; font-weight: 600;
-          color: var(--muted); text-decoration: none; border: 1.5px solid var(--cream-dark);
-          transition: all 0.2s; font-family: 'Syne', sans-serif; position: relative;
-          background: transparent; cursor: not-allowed;
-          display: flex; align-items: center; gap: 8px;
-        }
-        .badge-soon {
-          font-size: 10px; font-weight: 700; background: var(--gold-light);
-          color: var(--forest); padding: 2px 6px; border-radius: 4px; letter-spacing: 0.5px;
-        }
+        .nav-enter-btn:hover { background: var(--green-2); box-shadow: 0 4px 18px rgba(26,107,60,.35); transform: translateY(-1px); }
 
-        /* ── Hero ── */
+        /* ─── HERO ─── */
         .hero {
           min-height: 100vh;
-          padding: 140px 48px 80px;
-          display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: center;
-          background: var(--cream);
-          background-image:
-            radial-gradient(ellipse at 80% 20%, rgba(74,140,106,0.15) 0%, transparent 55%),
-            radial-gradient(ellipse at 10% 90%, rgba(200,146,42,0.1) 0%, transparent 50%);
+          display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 0;
+          padding-top: 68px;
         }
-        .hero-tag {
-          display: inline-flex; align-items: center; gap: 8px;
-          font-size: 12px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
-          color: var(--forest-light); margin-bottom: 28px;
-        }
-        .hero-tag-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--forest-light); }
-        .hero-h1 {
-          font-size: clamp(42px, 5.5vw, 72px); line-height: 1.05; letter-spacing: -2px;
-          color: var(--text); margin-bottom: 24px;
-        }
-        .hero-h1 em { color: var(--forest-mid); font-style: italic; }
-        .hero-sub {
-          font-size: 17px; line-height: 1.7; color: var(--muted);
-          max-width: 440px; margin-bottom: 40px; font-weight: 400;
-        }
-        .hero-ctas { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
-        .btn-hero-primary {
-          padding: 14px 32px; border-radius: 10px; font-size: 15px; font-weight: 700;
-          background: var(--forest); color: var(--white); text-decoration: none;
-          transition: all 0.25s; font-family: 'Syne', sans-serif;
-          display: flex; align-items: center; gap: 8px;
-        }
-        .btn-hero-primary:hover { background: var(--forest-mid); transform: translateY(-2px); box-shadow: 0 10px 32px rgba(26,51,41,0.3); }
-        .btn-hero-ghost {
-          padding: 14px 28px; border-radius: 10px; font-size: 15px; font-weight: 600;
-          color: var(--text); text-decoration: none; border: 1.5px solid rgba(26,51,41,0.2);
-          transition: all 0.25s; font-family: 'Syne', sans-serif; background: transparent;
-          display: flex; align-items: center; gap: 8px;
-        }
-        .btn-hero-ghost:hover { border-color: var(--forest); background: rgba(26,51,41,0.04); }
-        .hero-trust { margin-top: 48px; display: flex; align-items: center; gap: 24px; }
-        .hero-trust-text { font-size: 13px; color: var(--muted); font-weight: 500; }
-        .hero-trust-avatars { display: flex; }
-        .hero-trust-avatar {
-          width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--cream);
-          background: var(--forest-light); margin-left: -8px; display: flex;
-          align-items: center; justify-content: center; font-size: 11px; color: white; font-weight: 700;
-        }
-        .hero-trust-avatar:first-child { margin-left: 0; }
-        .hero-trust-avatar:nth-child(2) { background: var(--forest); }
-        .hero-trust-avatar:nth-child(3) { background: var(--gold); }
-
-        /* ── Dashboard Preview ── */
-        .preview-wrap { position: relative; display: flex; align-items: center; justify-content: center; }
-        .preview-card {
-          width: 100%; max-width: 480px;
+        .hero-left {
+          display: flex; flex-direction: column; justify-content: center;
+          padding: 80px 56px 80px 56px;
           background: var(--white);
-          border-radius: 20px;
-          box-shadow: 0 24px 80px rgba(26,51,41,0.15), 0 4px 16px rgba(26,51,41,0.08);
-          overflow: hidden;
-          border: 1px solid rgba(26,51,41,0.08);
-          animation: floatCard 5s ease-in-out infinite;
         }
-        @keyframes floatCard {
-          0%, 100% { transform: translateY(0px) rotate(-0.5deg); }
-          50% { transform: translateY(-12px) rotate(0.5deg); }
+        .hero-eyebrow {
+          display: inline-flex; align-items: center; gap: 8px;
+          background: var(--surface); border: 1px solid var(--border);
+          border-radius: 100px; padding: 6px 14px 6px 10px;
+          font-size: 12px; font-weight: 700; color: var(--green);
+          letter-spacing: 0.8px; text-transform: uppercase;
+          margin-bottom: 32px; width: fit-content;
         }
-        .preview-bar {
-          background: var(--forest); padding: 14px 18px;
-          display: flex; align-items: center; gap: 8px;
+        .hero-eyebrow-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green-3); }
+        .hero-h1 {
+          font-size: clamp(44px, 5.5vw, 74px); font-weight: 800;
+          line-height: 1.04; letter-spacing: -2.5px; color: var(--ink);
+          margin-bottom: 24px;
         }
-        .preview-bar-dot { width: 8px; height: 8px; border-radius: 50%; }
-        .preview-bar-title { margin-left: auto; font-size: 12px; color: rgba(255,255,255,0.6); font-family: 'Syne', sans-serif; }
-        .preview-body { padding: 20px; }
-        .preview-stats-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 16px; }
-        .preview-stat {
-          background: var(--cream); border-radius: 10px; padding: 12px;
-          border: 1px solid var(--cream-dark);
+        .hero-h1 .accent { color: var(--green); }
+        .hero-h1 .block {
+          display: inline-block; background: var(--lime); color: var(--ink);
+          padding: 0 12px 4px; border-radius: 8px; line-height: 1.15;
         }
-        .preview-stat-val { font-size: 20px; font-weight: 800; color: var(--forest); font-family: 'Syne', sans-serif; }
-        .preview-stat-label { font-size: 10px; color: var(--muted); font-weight: 500; margin-top: 2px; }
-        .preview-list { display: flex; flex-direction: column; gap: 8px; }
-        .preview-item {
-          display: flex; align-items: center; gap: 10px;
-          padding: 10px 12px; border-radius: 10px;
-          background: var(--cream); border: 1px solid var(--cream-dark);
+        .hero-sub {
+          font-size: 18px; font-weight: 400; line-height: 1.7;
+          color: var(--muted); max-width: 460px; margin-bottom: 44px;
         }
-        .preview-item-avatar {
-          width: 28px; height: 28px; border-radius: 50%;
+        .hero-actions { display: flex; flex-direction: column; gap: 16px; }
+        .btn-main {
+          display: inline-flex; align-items: center; gap: 8px; width: fit-content;
+          padding: 15px 32px; border-radius: 12px; font-size: 16px; font-weight: 700;
+          background: var(--ink); color: var(--white); text-decoration: none;
+          font-family: inherit; transition: all .2s;
+        }
+        .btn-main:hover { background: var(--dark); transform: translateY(-2px); box-shadow: 0 12px 36px rgba(11,28,19,.25); }
+        .hero-note { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+        .hero-note svg { color: var(--green-3); }
+        .hero-right {
           display: flex; align-items: center; justify-content: center;
-          font-size: 10px; font-weight: 700; color: white; flex-shrink: 0;
+          background: var(--dark);
+          background-image: radial-gradient(ellipse at 20% 40%, rgba(45,148,89,.2) 0%, transparent 60%),
+                            radial-gradient(ellipse at 80% 80%, rgba(232,168,53,.12) 0%, transparent 50%);
+          padding: 60px 48px;
+          position: relative; overflow: hidden;
         }
-        .preview-item-info { flex: 1; }
-        .preview-item-name { font-size: 12px; font-weight: 600; color: var(--text); }
-        .preview-item-time { font-size: 10px; color: var(--muted); }
-        .preview-item-badge {
-          font-size: 10px; font-weight: 600; padding: 3px 8px; border-radius: 6px;
+        .hero-right::before {
+          content: ''; position: absolute; inset: 0;
+          background-image: radial-gradient(rgba(255,255,255,.04) 1px, transparent 1px);
+          background-size: 24px 24px;
         }
-        .badge-green { background: #D4EDDA; color: #1A5C35; }
-        .badge-amber { background: #FFF3CD; color: #7A4F00; }
-        .badge-blue { background: #D0E8FF; color: #1A4A7A; }
 
-        .floating-chip {
-          position: absolute;
-          background: white;
-          border-radius: 12px;
-          padding: 10px 14px;
-          box-shadow: 0 8px 32px rgba(26,51,41,0.15);
-          border: 1px solid rgba(26,51,41,0.08);
+        /* ─── DASHBOARD PREVIEW ─── */
+        .dash-card {
+          width: 100%; max-width: 400px; position: relative; z-index: 1;
+          background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12);
+          border-radius: 18px; overflow: hidden;
+          backdrop-filter: blur(12px);
+          box-shadow: 0 32px 80px rgba(0,0,0,.5);
+          animation: floatDash 6s ease-in-out infinite;
+        }
+        @keyframes floatDash {
+          0%,100% { transform: translateY(0) rotateY(-2deg); }
+          50% { transform: translateY(-14px) rotateY(2deg); }
+        }
+        .dash-bar {
+          padding: 14px 16px; display: flex; align-items: center; gap: 6px;
+          border-bottom: 1px solid rgba(255,255,255,.08);
+          background: rgba(255,255,255,.04);
+        }
+        .dash-dot { width: 9px; height: 9px; border-radius: 50%; }
+        .dash-title { margin-left: auto; font-size: 11px; color: rgba(255,255,255,.4); font-weight: 500; }
+        .dash-body { padding: 18px; }
+        .dash-section-label { font-size: 10px; font-weight: 700; color: rgba(255,255,255,.35); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 10px; }
+        .dash-kpis { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 16px; }
+        .dash-kpi {
+          background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.08);
+          border-radius: 10px; padding: 12px 10px;
+        }
+        .dash-kpi-val { font-size: 22px; font-weight: 800; color: #fff; line-height: 1; }
+        .dash-kpi-label { font-size: 10px; color: rgba(255,255,255,.4); margin-top: 4px; font-weight: 500; }
+        .dash-rows { display: flex; flex-direction: column; gap: 7px; }
+        .dash-row {
+          display: flex; align-items: center; gap: 10px;
+          background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.07);
+          border-radius: 10px; padding: 9px 11px;
+        }
+        .dash-avatar {
+          width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+          display: flex; align-items: center; justify-content: center;
+          font-size: 10px; font-weight: 800; color: white;
+        }
+        .dash-row-name { font-size: 12px; font-weight: 600; color: rgba(255,255,255,.85); }
+        .dash-row-sub { font-size: 10px; color: rgba(255,255,255,.35); }
+        .dash-pill {
+          margin-left: auto; font-size: 10px; font-weight: 700;
+          padding: 3px 9px; border-radius: 100px;
+        }
+        .pill-green { background: rgba(95,191,134,.18); color: #5FBF86; }
+        .pill-amber { background: rgba(232,168,53,.18); color: #E8A835; }
+        .pill-blue  { background: rgba(99,160,232,.18); color: #63A0E8; }
+
+        .hero-chip {
+          position: absolute; z-index: 2;
+          background: white; border-radius: 12px; padding: 10px 14px;
           display: flex; align-items: center; gap: 8px;
-          font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 600; color: var(--text);
+          box-shadow: 0 8px 32px rgba(0,0,0,.25);
+          font-size: 12px; font-weight: 700; color: var(--ink);
         }
-        .chip-1 { top: -20px; right: -20px; animation: floatChip 4s ease-in-out infinite; }
-        .chip-2 { bottom: 20px; left: -30px; animation: floatChip 4s ease-in-out 1.5s infinite; }
-        @keyframes floatChip {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-8px); }
-        }
-        .chip-icon { font-size: 18px; }
-        .chip-val { font-size: 16px; font-weight: 800; color: var(--forest); }
+        .chip-top { top: 80px; right: 40px; animation: chipFloat 4s ease-in-out infinite; }
+        .chip-bot { bottom: 100px; left: 30px; animation: chipFloat 4s ease-in-out 1.8s infinite; }
+        @keyframes chipFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+        .chip-emoji { font-size: 20px; line-height: 1; }
+        .chip-val { font-size: 17px; font-weight: 800; color: var(--green); }
 
-        /* ── Features strip ── */
+        /* ─── MARQUEE STRIP ─── */
         .strip {
-          background: var(--forest);
-          padding: 28px 48px;
-          display: flex; align-items: center; justify-content: center;
-          gap: 0; overflow: hidden;
+          background: var(--ink); overflow: hidden;
+          padding: 18px 0; border-top: 1px solid rgba(255,255,255,.06);
         }
+        .strip-track {
+          display: flex; gap: 0; white-space: nowrap;
+          animation: marquee 22s linear infinite;
+        }
+        @keyframes marquee { from{transform:translateX(0)} to{transform:translateX(-50%)} }
         .strip-item {
-          display: flex; align-items: center; gap: 10px;
-          padding: 0 36px; border-right: 1px solid rgba(255,255,255,0.1);
-          white-space: nowrap;
+          display: inline-flex; align-items: center; gap: 10px;
+          padding: 0 40px; border-right: 1px solid rgba(255,255,255,.1);
+          font-size: 13px; font-weight: 600; color: rgba(255,255,255,.55);
+          white-space: nowrap; flex-shrink: 0;
         }
         .strip-item:last-child { border-right: none; }
-        .strip-icon { font-size: 18px; }
-        .strip-text { font-size: 14px; font-weight: 600; color: rgba(255,255,255,0.85); }
+        .strip-icon { font-size: 16px; }
 
-        /* ── Features main ── */
-        .features { padding: 100px 48px; background: var(--white); }
-        .section-tag {
-          font-size: 11px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase;
-          color: var(--forest-light); margin-bottom: 16px;
+        /* ─── FEATURES ─── */
+        .features { padding: 110px 56px; background: var(--surface); }
+        .features-header { max-width: 680px; margin-bottom: 64px; }
+        .label-tag {
+          display: inline-block; font-size: 11px; font-weight: 800;
+          letter-spacing: 2px; text-transform: uppercase;
+          color: var(--green); margin-bottom: 18px;
         }
-        .section-title {
-          font-size: clamp(32px, 4vw, 52px); letter-spacing: -1.5px; line-height: 1.1;
-          color: var(--text); margin-bottom: 16px;
+        .sec-h2 {
+          font-size: clamp(32px, 4vw, 52px); font-weight: 800;
+          letter-spacing: -2px; line-height: 1.08; color: var(--ink);
+          margin-bottom: 16px;
         }
-        .section-sub { font-size: 17px; color: var(--muted); max-width: 500px; line-height: 1.7; margin-bottom: 64px; }
-        .features-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 2px; background: rgba(26,51,41,0.08); border-radius: 20px; overflow: hidden; }
-        .feature-card {
-          background: var(--white); padding: 40px;
-          transition: all 0.25s;
+        .sec-p { font-size: 17px; color: var(--muted); line-height: 1.7; }
+        .feat-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 16px; }
+        .feat-card {
+          background: var(--white); border: 1.5px solid var(--border);
+          border-radius: 18px; padding: 36px;
+          transition: all .22s; display: flex; flex-direction: column; gap: 16px;
         }
-        .feature-card:hover { background: var(--cream); }
-        .feature-num { font-size: 11px; font-weight: 700; color: var(--sage); letter-spacing: 1px; margin-bottom: 20px; }
-        .feature-icon-wrap {
-          width: 48px; height: 48px; border-radius: 12px;
-          background: var(--cream); border: 1px solid var(--cream-dark);
+        .feat-card:hover { border-color: var(--green-3); box-shadow: 0 8px 40px rgba(26,107,60,.1); transform: translateY(-3px); }
+        .feat-icon {
+          width: 52px; height: 52px; border-radius: 14px;
+          background: var(--surface); border: 1.5px solid var(--border);
+          display: flex; align-items: center; justify-content: center; font-size: 24px;
+          transition: all .22s;
+        }
+        .feat-card:hover .feat-icon { background: var(--ink); border-color: var(--ink); }
+        .feat-title { font-size: 19px; font-weight: 800; color: var(--ink); letter-spacing: -0.5px; }
+        .feat-desc { font-size: 15px; color: var(--muted); line-height: 1.7; }
+
+        /* ─── NUMBERS ─── */
+        .numbers { padding: 100px 56px; background: var(--white); }
+        .numbers-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; }
+        .numbers-left .sec-h2 { margin-bottom: 20px; }
+        .numbers-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .num-card {
+          background: var(--surface); border: 1.5px solid var(--border);
+          border-radius: 16px; padding: 28px 24px;
+        }
+        .num-val {
+          font-size: clamp(40px, 4.5vw, 58px); font-weight: 800;
+          letter-spacing: -2.5px; line-height: 1; color: var(--ink); margin-bottom: 6px;
+        }
+        .num-val em { color: var(--green); font-style: normal; }
+        .num-lbl { font-size: 14px; color: var(--muted); font-weight: 500; line-height: 1.5; }
+
+        /* ─── HOW ─── */
+        .how {
+          padding: 100px 56px;
+          background: var(--dark);
+          background-image: radial-gradient(ellipse at 10% 50%, rgba(45,148,89,.15) 0%, transparent 55%),
+                            radial-gradient(ellipse at 90% 20%, rgba(198,241,53,.06) 0%, transparent 50%);
+        }
+        .how-grid { display: grid; grid-template-columns: 0.8fr 1.2fr; gap: 80px; align-items: center; }
+        .how-steps { display: flex; flex-direction: column; gap: 0; }
+        .how-step {
+          display: flex; gap: 20px; padding: 28px 0;
+          border-bottom: 1px solid rgba(255,255,255,.07);
+        }
+        .how-step:last-child { border-bottom: none; }
+        .how-step-num {
+          width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+          background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12);
           display: flex; align-items: center; justify-content: center;
-          font-size: 22px; margin-bottom: 20px;
-          transition: all 0.25s;
+          font-size: 13px; font-weight: 800; color: var(--green-3);
         }
-        .feature-card:hover .feature-icon-wrap { background: var(--forest); }
-        .feature-name { font-size: 20px; font-weight: 700; color: var(--text); margin-bottom: 10px; }
-        .feature-desc { font-size: 15px; color: var(--muted); line-height: 1.65; }
+        .how-step-body { flex: 1; }
+        .how-step-name { font-size: 17px; font-weight: 700; color: rgba(255,255,255,.9); margin-bottom: 6px; }
+        .how-step-desc { font-size: 14px; color: rgba(255,255,255,.4); line-height: 1.65; }
+        .how-right {}
+        .how-h2 { font-size: clamp(34px,4vw,52px); font-weight: 800; letter-spacing: -2px; line-height: 1.08; color: white; margin-bottom: 20px; }
+        .how-h2 .lime { color: var(--lime); }
+        .how-sub { font-size: 17px; color: rgba(255,255,255,.45); line-height: 1.7; max-width: 420px; margin-bottom: 40px; }
+        .btn-white {
+          display: inline-flex; align-items: center; gap: 8px;
+          padding: 14px 28px; border-radius: 10px; font-size: 15px; font-weight: 700;
+          background: white; color: var(--ink); text-decoration: none;
+          font-family: inherit; transition: all .2s;
+        }
+        .btn-white:hover { background: var(--lime); transform: translateY(-2px); box-shadow: 0 8px 28px rgba(0,0,0,.4); }
 
-        /* ── Numbers ── */
-        .numbers { padding: 100px 48px; background: var(--cream); }
-        .numbers-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 2px; background: rgba(26,51,41,0.08); border-radius: 20px; overflow: hidden; }
-        .number-card { background: var(--cream); padding: 48px 36px; }
-        .number-val {
-          font-size: clamp(44px, 5vw, 68px); font-weight: 800; color: var(--forest);
-          letter-spacing: -3px; line-height: 1; margin-bottom: 8px;
+        /* ─── CTA ─── */
+        .cta {
+          padding: 120px 56px; background: var(--white); text-align: center;
+          background-image: radial-gradient(ellipse at 50% 100%, rgba(26,107,60,.08) 0%, transparent 70%);
         }
-        .number-val span { color: var(--gold); }
-        .number-label { font-size: 15px; color: var(--muted); font-weight: 500; line-height: 1.5; }
-
-        /* ── How it works ── */
-        .how { padding: 100px 48px; background: var(--white); }
-        .steps { display: grid; grid-template-columns: repeat(3,1fr); gap: 40px; margin-top: 64px; }
-        .step { display: flex; flex-direction: column; gap: 16px; }
-        .step-num {
-          width: 48px; height: 48px; border-radius: 50%; background: var(--forest);
-          display: flex; align-items: center; justify-content: center;
-          font-size: 16px; font-weight: 800; color: white; font-family: 'Syne', sans-serif;
+        .cta-badge {
+          display: inline-flex; align-items: center; gap: 8px;
+          background: var(--surface); border: 1.5px solid var(--border);
+          border-radius: 100px; padding: 6px 16px 6px 10px;
+          font-size: 12px; font-weight: 700; color: var(--green);
+          letter-spacing: 0.6px; margin-bottom: 32px;
         }
-        .step-line {
-          height: 2px; flex: 1; background: linear-gradient(90deg, var(--forest-light), transparent);
-          margin-top: 23px;
+        .cta-badge-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green-3); animation: pulse 2s ease-in-out infinite; }
+        @keyframes pulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.4);opacity:.7} }
+        .cta-h2 { font-size: clamp(40px,5.5vw,72px); font-weight: 800; letter-spacing: -2.5px; line-height: 1.06; color: var(--ink); margin-bottom: 20px; max-width: 700px; margin-left: auto; margin-right: auto; }
+        .cta-h2 .line-accent {
+          display: inline; position: relative;
         }
-        .step-header { display: flex; align-items: center; gap: 12px; }
-        .step-name { font-size: 18px; font-weight: 700; color: var(--text); }
-        .step-desc { font-size: 15px; color: var(--muted); line-height: 1.65; }
-
-        /* ── CTA ── */
-        .cta-section {
-          padding: 100px 48px;
-          background: var(--forest);
-          background-image: radial-gradient(ellipse at 30% 50%, rgba(74,140,106,0.3) 0%, transparent 60%),
-                            radial-gradient(ellipse at 80% 20%, rgba(200,146,42,0.2) 0%, transparent 50%);
-          text-align: center;
+        .cta-h2 .line-accent::after {
+          content: ''; position: absolute; left: 0; bottom: -2px;
+          width: 100%; height: 4px; background: var(--lime); border-radius: 2px;
         }
-        .cta-tag { font-size: 11px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; color: var(--sage); margin-bottom: 24px; }
-        .cta-title { font-size: clamp(36px, 5vw, 64px); letter-spacing: -2px; line-height: 1.05; color: var(--white); margin-bottom: 20px; }
-        .cta-sub { font-size: 17px; color: rgba(255,255,255,0.6); max-width: 440px; margin: 0 auto 48px; line-height: 1.7; }
-        .cta-actions { display: flex; align-items: center; justify-content: center; gap: 16px; flex-wrap: wrap; }
-        .btn-cta-primary {
+        .cta-sub { font-size: 18px; color: var(--muted); line-height: 1.7; max-width: 480px; margin: 0 auto 48px; }
+        .cta-btns { display: flex; align-items: center; justify-content: center; gap: 16px; flex-wrap: wrap; }
+        .btn-dark {
+          display: inline-flex; align-items: center; gap: 8px;
           padding: 16px 36px; border-radius: 12px; font-size: 16px; font-weight: 700;
-          background: var(--gold-light); color: var(--forest); text-decoration: none;
-          transition: all 0.25s; font-family: 'Syne', sans-serif;
-          display: flex; align-items: center; gap: 8px;
+          background: var(--ink); color: white; text-decoration: none;
+          font-family: inherit; transition: all .2s;
         }
-        .btn-cta-primary:hover { background: #f5ce6a; transform: translateY(-2px); box-shadow: 0 12px 36px rgba(0,0,0,0.3); }
-        .btn-cta-ghost {
-          padding: 16px 32px; border-radius: 12px; font-size: 16px; font-weight: 600;
-          color: rgba(255,255,255,0.7); text-decoration: none; border: 1.5px solid rgba(255,255,255,0.2);
-          transition: all 0.25s; font-family: 'Syne', sans-serif; background: transparent;
-          display: flex; align-items: center; gap: 8px;
+        .btn-dark:hover { background: var(--dark); transform: translateY(-2px); box-shadow: 0 12px 36px rgba(11,28,19,.2); }
+        .btn-outline {
+          display: inline-flex; align-items: center; gap: 8px;
+          padding: 15px 30px; border-radius: 12px; font-size: 16px; font-weight: 600;
+          color: var(--ink-soft); text-decoration: none; border: 1.5px solid var(--border);
+          font-family: inherit; transition: all .2s; background: transparent; cursor: not-allowed; opacity: .65;
         }
-        .btn-cta-ghost:hover { border-color: rgba(255,255,255,0.5); color: white; }
 
-        /* ── Footer ── */
+        /* ─── FOOTER ─── */
         .footer {
-          background: #0D1F16; padding: 48px;
+          background: var(--dark); padding: 48px 56px;
           display: flex; align-items: center; justify-content: space-between;
-          flex-wrap: wrap; gap: 20px;
+          flex-wrap: wrap; gap: 16px;
+          border-top: 1px solid rgba(255,255,255,.06);
         }
-        .footer-logo { font-size: 16px; font-weight: 700; color: rgba(255,255,255,0.5); font-family: 'Syne', sans-serif; }
-        .footer-logo strong { color: rgba(255,255,255,0.85); }
-        .footer-copy { font-size: 13px; color: rgba(255,255,255,0.3); }
-        .footer-link { font-size: 13px; color: rgba(255,255,255,0.4); text-decoration: none; transition: color 0.2s; }
-        .footer-link:hover { color: rgba(255,255,255,0.7); }
-        .footer-links { display: flex; gap: 24px; }
+        .footer-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+        .footer-brand-icon {
+          width: 28px; height: 28px; border-radius: 7px; background: rgba(255,255,255,.1);
+          display: flex; align-items: center; justify-content: center;
+        }
+        .footer-brand-icon svg { width: 14px; height: 14px; }
+        .footer-brand-name { font-size: 15px; font-weight: 700; color: rgba(255,255,255,.6); }
+        .footer-copy { font-size: 13px; color: rgba(255,255,255,.25); }
 
-        /* ── Animations on load ── */
-        @keyframes fadeUp { from { opacity:0; transform:translateY(30px); } to { opacity:1; transform:translateY(0); } }
-        .fade-up-1 { animation: fadeUp 0.8s ease both; }
-        .fade-up-2 { animation: fadeUp 0.8s 0.15s ease both; }
-        .fade-up-3 { animation: fadeUp 0.8s 0.3s ease both; }
-        .fade-up-4 { animation: fadeUp 0.8s 0.45s ease both; }
-        .fade-up-5 { animation: fadeUp 0.8s 0.6s ease both; }
+        /* ─── ANIMATIONS ─── */
+        @keyframes fadeUp { from{opacity:0;transform:translateY(28px)} to{opacity:1;transform:translateY(0)} }
+        .fu1 { animation: fadeUp .75s ease both; }
+        .fu2 { animation: fadeUp .75s .12s ease both; }
+        .fu3 { animation: fadeUp .75s .24s ease both; }
+        .fu4 { animation: fadeUp .75s .36s ease both; }
+        .fu5 { animation: fadeUp .75s .48s ease both; }
 
-        @media (max-width: 900px) {
-          .hero { grid-template-columns: 1fr; padding: 120px 24px 60px; }
-          .preview-wrap { display: none; }
-          .header { padding: 16px 24px; }
-          .strip { flex-direction: column; gap: 12px; padding: 24px; }
-          .strip-item { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.1); padding: 12px 0; width: 100%; justify-content: center; }
-          .strip-item:last-child { border-bottom: none; }
-          .features { padding: 60px 24px; }
-          .features-grid { grid-template-columns: 1fr; }
-          .numbers { padding: 60px 24px; }
-          .numbers-grid { grid-template-columns: repeat(2,1fr); }
-          .how { padding: 60px 24px; }
-          .steps { grid-template-columns: 1fr; }
-          .step-line { display: none; }
-          .cta-section { padding: 60px 24px; }
-          .footer { padding: 32px 24px; flex-direction: column; text-align: center; }
-          .footer-links { justify-content: center; }
+        /* ─── RESPONSIVE ─── */
+        @media(max-width:960px){
+          .nav { padding: 0 24px; }
+          .hero { grid-template-columns: 1fr; min-height: auto; }
+          .hero-left { padding: 80px 24px 48px; }
+          .hero-right { display: none; }
+          .features { padding: 64px 24px; }
+          .feat-grid { grid-template-columns: 1fr; }
+          .numbers { padding: 64px 24px; }
+          .numbers-inner { grid-template-columns: 1fr; gap: 40px; }
+          .how { padding: 64px 24px; }
+          .how-grid { grid-template-columns: 1fr; gap: 48px; }
+          .cta { padding: 72px 24px; }
+          .footer { padding: 36px 24px; flex-direction: column; text-align: center; }
         }
       `}</style>
 
       <div className="lp">
 
-        {/* ── Header ── */}
-        <header className="header">
-          <a href="/" className="logo">
-            <div className="logo-mark">
-              <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M10 2v7M10 11v7M2 10h7M11 10h7" stroke="white" strokeWidth="2.2" strokeLinecap="round"/>
-                <circle cx="10" cy="10" r="2.5" fill="white"/>
-              </svg>
+        {/* ── NAV ── */}
+        <nav className="nav">
+          <a href="/" className="nav-logo">
+            <div className="nav-logo-icon">
+              <svg viewBox="0 0 17 17" fill="none"><path d="M8.5 2v5.5M8.5 9.5V15M2 8.5h5.5M9.5 8.5H15" stroke="white" strokeWidth="2" strokeLinecap="round"/><circle cx="8.5" cy="8.5" r="2" fill="white"/></svg>
             </div>
-            <span className="logo-text">Fisio<span>Hub</span></span>
+            <span className="nav-logo-name">Fisio<b>Hub</b></span>
           </a>
-          <div className="header-actions">
-            <button className="btn-plans" disabled title="Em breve">
-              Planos
-              <span className="badge-soon">EM BREVE</span>
-            </button>
-            <Link href="/login" className="btn-primary">
+          <div className="nav-right">
+            <Link href="/planos" className="nav-plans-btn">
+              Planos & Preços
+            </Link>
+            <Link href="/login" className="nav-enter-btn">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
               Entrar
             </Link>
           </div>
-        </header>
+        </nav>
 
-        {/* ── Hero ── */}
+        {/* ── HERO ── */}
         <section className="hero">
-          <div>
-            <div className="hero-tag fade-up-1">
-              <span className="hero-tag-dot" />
-              Plataforma SaaS para Fisioterapia
+          <div className="hero-left">
+            <div className="hero-eyebrow fu1">
+              <span className="hero-eyebrow-dot" />
+              Plataforma para Fisioterapia
             </div>
-            <h1 className="hero-h1 serif fade-up-2">
-              Gestão clínica<br />
-              que acompanha<br />
-              <em>seu ritmo.</em>
+            <h1 className="hero-h1 fu2">
+              Sua clínica,<br />
+              <span className="accent">organizada</span><br />
+              de verdade.
             </h1>
-            <p className="hero-sub fade-up-3">
-              Agendamentos, prontuários, finanças e comunicação com pacientes — tudo em um só lugar, feito para clínicas de fisioterapia que levam o cuidado a sério.
+            <p className="hero-sub fu3">
+              Agendamentos, prontuários, financeiro e WhatsApp automático — tudo integrado para você atender mais e administrar menos.
             </p>
-            <div className="hero-ctas fade-up-4">
-              <button className="btn-hero-ghost" style={{ cursor: 'not-allowed', opacity: 0.7 }} disabled>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                Ver demonstração
-              </button>
-            </div>
-            <div className="hero-trust fade-up-5">
-              <div className="hero-trust-avatars">
-                <div className="hero-trust-avatar">JS</div>
-                <div className="hero-trust-avatar">AM</div>
-                <div className="hero-trust-avatar">CP</div>
-              </div>
-              <p className="hero-trust-text">
-                Clínicas de fisioterapia já utilizam a plataforma
+            <div className="hero-actions fu4">
+              <Link href="/planos" className="btn-main">
+                Ver planos e preços
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+              </Link>
+              <p className="hero-note fu5">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                Sem contrato de fidelidade · Cancele quando quiser
               </p>
             </div>
           </div>
 
-          {/* Dashboard Preview */}
-          <div className="preview-wrap fade-up-3">
-            <div className="floating-chip chip-1">
-              <span className="chip-icon">📅</span>
+          <div className="hero-right">
+            <div className="hero-chip chip-top">
+              <span className="chip-emoji">📲</span>
               <div>
-                <div className="chip-val">+34</div>
-                <div style={{ fontSize: '10px', color: 'var(--muted)' }}>sessões hoje</div>
+                <div className="chip-val">WhatsApp</div>
+                <div style={{fontSize:'10px',color:'var(--muted)'}}>confirmação enviada</div>
               </div>
             </div>
 
-            <div className="preview-card">
-              <div className="preview-bar">
-                <div className="preview-bar-dot" style={{ background: '#FF5F57' }} />
-                <div className="preview-bar-dot" style={{ background: '#FFBD2E' }} />
-                <div className="preview-bar-dot" style={{ background: '#28C840' }} />
-                <span className="preview-bar-title">Dashboard — Clínica Demo</span>
+            <div className="dash-card">
+              <div className="dash-bar">
+                <div className="dash-dot" style={{background:'#FF5F57'}}/>
+                <div className="dash-dot" style={{background:'#FFBD2E'}}/>
+                <div className="dash-dot" style={{background:'#28C840'}}/>
+                <span className="dash-title">dashboard · hoje</span>
               </div>
-              <div className="preview-body">
-                <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--muted)', marginBottom: '10px', fontFamily: 'Syne, sans-serif' }}>VISÃO GERAL DE HOJE</div>
-                <div className="preview-stats-row">
-                  <div className="preview-stat">
-                    <div className="preview-stat-val">12</div>
-                    <div className="preview-stat-label">Agendados</div>
+              <div className="dash-body">
+                <div className="dash-section-label">Resumo do dia</div>
+                <div className="dash-kpis">
+                  <div className="dash-kpi">
+                    <div className="dash-kpi-val">12</div>
+                    <div className="dash-kpi-label">Agendados</div>
                   </div>
-                  <div className="preview-stat">
-                    <div className="preview-stat-val" style={{ color: 'var(--gold)' }}>8</div>
-                    <div className="preview-stat-label">Confirmados</div>
+                  <div className="dash-kpi">
+                    <div className="dash-kpi-val" style={{color:'#5FBF86'}}>8</div>
+                    <div className="dash-kpi-label">Confirmados</div>
                   </div>
-                  <div className="preview-stat">
-                    <div className="preview-stat-val" style={{ color: 'var(--forest-light)' }}>4</div>
-                    <div className="preview-stat-label">Concluídos</div>
+                  <div className="dash-kpi">
+                    <div className="dash-kpi-val" style={{color:'#E8A835'}}>4</div>
+                    <div className="dash-kpi-label">Realizados</div>
                   </div>
                 </div>
-                <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--muted)', marginBottom: '8px', fontFamily: 'Syne, sans-serif' }}>PRÓXIMAS CONSULTAS</div>
-                <div className="preview-list">
+                <div className="dash-section-label">Próximas consultas</div>
+                <div className="dash-rows">
                   {[
-                    { initials: 'MA', name: 'Maria Alves', time: '14:00', status: 'Confirmado', color: '#4A8C6A', badgeClass: 'badge-green' },
-                    { initials: 'JC', name: 'João Costa', time: '14:30', status: 'Agendado', color: '#C8922A', badgeClass: 'badge-amber' },
-                    { initials: 'LP', name: 'Lúcia Pinto', time: '15:00', status: 'Avaliação', color: '#3A6EA8', badgeClass: 'badge-blue' },
-                  ].map((item) => (
-                    <div key={item.name} className="preview-item">
-                      <div className="preview-item-avatar" style={{ background: item.color }}>{item.initials}</div>
-                      <div className="preview-item-info">
-                        <div className="preview-item-name">{item.name}</div>
-                        <div className="preview-item-time">{item.time} · Dra. Ana Souza</div>
+                    {i:'MA',n:'Maria Alves',t:'14:00',s:'Confirmado',c:'#2D9459',p:'pill-green'},
+                    {i:'JC',n:'João Costa',t:'14:30',s:'Agendado',c:'#C8922A',p:'pill-amber'},
+                    {i:'LP',n:'Lúcia Pinto',t:'15:00',s:'Avaliação',c:'#3A6EA8',p:'pill-blue'},
+                  ].map(r=>(
+                    <div key={r.n} className="dash-row">
+                      <div className="dash-avatar" style={{background:r.c}}>{r.i}</div>
+                      <div>
+                        <div className="dash-row-name">{r.n}</div>
+                        <div className="dash-row-sub">{r.t} · Dra. Ana</div>
                       </div>
-                      <span className={`preview-item-badge ${item.badgeClass}`}>{item.status}</span>
+                      <span className={`dash-pill ${r.p}`}>{r.s}</span>
                     </div>
                   ))}
                 </div>
               </div>
             </div>
 
-            <div className="floating-chip chip-2">
-              <span className="chip-icon">💬</span>
+            <div className="hero-chip chip-bot">
+              <span className="chip-emoji">💰</span>
               <div>
-                <div style={{ fontSize: '11px', fontWeight: 600 }}>WhatsApp enviado</div>
-                <div style={{ fontSize: '10px', color: 'var(--muted)' }}>confirmação automática</div>
+                <div className="chip-val">R$ 4.280</div>
+                <div style={{fontSize:'10px',color:'var(--muted)'}}>receita esse mês</div>
               </div>
             </div>
           </div>
         </section>
 
-        {/* ── Feature Strip ── */}
+        {/* ── STRIP ── */}
         <div className="strip">
-          {[
-            { icon: '📅', text: 'Agendamento inteligente' },
-            { icon: '🗂️', text: 'Prontuário digital' },
-            { icon: '💰', text: 'Gestão financeira' },
-            { icon: '📲', text: 'WhatsApp integrado' },
-            { icon: '📊', text: 'Relatórios detalhados' },
-            { icon: '🏥', text: 'Multi-clínica' },
-          ].map((item) => (
-            <div key={item.text} className="strip-item">
-              <span className="strip-icon">{item.icon}</span>
-              <span className="strip-text">{item.text}</span>
-            </div>
-          ))}
+          <div className="strip-track">
+            {[
+              {icon:'📅',text:'Agendamento inteligente'},
+              {icon:'🗂️',text:'Prontuário digital'},
+              {icon:'💬',text:'WhatsApp automático'},
+              {icon:'💳',text:'Gestão financeira'},
+              {icon:'📊',text:'Relatórios detalhados'},
+              {icon:'🏥',text:'Multi-clínica'},
+              {icon:'🔐',text:'Acesso por perfil'},
+              {icon:'📄',text:'PDF de pacientes'},
+              {icon:'📅',text:'Agendamento inteligente'},
+              {icon:'🗂️',text:'Prontuário digital'},
+              {icon:'💬',text:'WhatsApp automático'},
+              {icon:'💳',text:'Gestão financeira'},
+              {icon:'📊',text:'Relatórios detalhados'},
+              {icon:'🏥',text:'Multi-clínica'},
+              {icon:'🔐',text:'Acesso por perfil'},
+              {icon:'📄',text:'PDF de pacientes'},
+            ].map((item,i)=>(
+              <div key={i} className="strip-item">
+                <span className="strip-icon">{item.icon}</span>
+                <span>{item.text}</span>
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* ── Features ── */}
+        {/* ── FEATURES ── */}
         <section className="features">
-          <div className="section-tag">Funcionalidades</div>
-          <h2 className="section-title serif">Tudo que sua clínica<br />precisa, sem excessos.</h2>
-          <p className="section-sub">Desenvolvido com fisioterapeutas reais. Cada funcionalidade existe porque alguém precisou dela.</p>
-          <div className="features-grid">
-            {[
-              {
-                num: '01', icon: '📅',
-                name: 'Agenda visual',
-                desc: 'Visualize todos os agendamentos por fisioterapeuta, sala ou turno. Conflitos detectados automaticamente antes de salvar.',
-              },
-              {
-                num: '02', icon: '📋',
-                name: 'Prontuário completo',
-                desc: 'Anamnese, evolução de sessão, histórico de atendimentos e exportação em PDF com um clique.',
-              },
-              {
-                num: '03', icon: '💬',
-                name: 'WhatsApp automático',
-                desc: 'Mensagens de confirmação e lembrete enviadas automaticamente para o paciente via WhatsApp, sem depender de ninguém.',
-              },
-              {
-                num: '04', icon: '💳',
-                name: 'Financeiro integrado',
-                desc: 'Cobranças, pagamentos, despesas e DRE mensal. Tudo consolidado para você fechar o mês com clareza.',
-              },
-            ].map((f) => (
-              <div key={f.num} className="feature-card">
-                <div className="feature-num">{f.num} ——</div>
-                <div className="feature-icon-wrap">{f.icon}</div>
-                <div className="feature-name">{f.name}</div>
-                <p className="feature-desc">{f.desc}</p>
-              </div>
-            ))}
+          <div className="features-header">
+            <div className="label-tag">Funcionalidades</div>
+            <h2 className="sec-h2">O que vem dentro<br />do FisioHub.</h2>
+            <p className="sec-p">Cada funcionalidade foi desenhada para o fluxo real de uma clínica de fisioterapia. Sem inchaço, sem curva de aprendizado.</p>
           </div>
-        </section>
-
-        {/* ── Numbers ── */}
-        <section className="numbers">
-          <div className="numbers-grid">
+          <div className="feat-grid">
             {[
-              { val: '100', suffix: '%', label: 'baseado em\nfeedback real' },
-              { val: '4', suffix: 'x', label: 'mais rápido que\nplanilhas' },
-              { val: '0', suffix: 'h', label: 'de treinamento\npara começar' },
-              { val: '1', suffix: '', label: 'plataforma para\ntoda a equipe' },
-            ].map((n) => (
-              <div key={n.val} className="number-card">
-                <div className="number-val">{n.val}<span>{n.suffix}</span></div>
-                <div className="number-label" style={{ whiteSpace: 'pre-line' }}>{n.label}</div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* ── How it works ── */}
-        <section className="how">
-          <div className="section-tag">Como funciona</div>
-          <h2 className="section-title serif">Sua clínica no ar<br />em minutos.</h2>
-          <div className="steps">
-            {[
-              {
-                num: '1',
-                name: 'Cadastre sua clínica',
-                desc: 'Crie sua conta, configure o horário de funcionamento e adicione sua equipe. Leva menos de 5 minutos.',
-              },
-              {
-                num: '2',
-                name: 'Cadastre os pacientes',
-                desc: 'Importe ou cadastre seus pacientes com histórico, contato e dados de saúde. Tudo em um lugar.',
-              },
-              {
-                num: '3',
-                name: 'Comece a atender',
-                desc: 'Agende, registre sessões, envie confirmações pelo WhatsApp e acompanhe as finanças em tempo real.',
-              },
-            ].map((step, i) => (
-              <div key={step.num} className="step">
-                <div className="step-header">
-                  <div className="step-num">{step.num}</div>
-                  {i < 2 && <div className="step-line" />}
+              {icon:'📅',title:'Agenda visual completa',desc:'Veja todos os horários por fisioterapeuta, sala ou turno. O sistema detecta conflitos automaticamente antes de confirmar qualquer agendamento.'},
+              {icon:'📋',title:'Prontuário e anamnese',desc:'Registro completo de evolução de cada sessão, histórico de atendimentos e ficha de anamnese. Tudo exportável em PDF com um clique.'},
+              {icon:'💬',title:'WhatsApp automático',desc:'Mensagem de confirmação e lembrete enviadas direto pelo WhatsApp do paciente, sem depender de ninguém da equipe manualmente.'},
+              {icon:'💰',title:'Financeiro integrado',desc:'Cobranças, pagamentos, fluxo de caixa e DRE mensal consolidados. Feche o mês sabendo exatamente quanto entrou e saiu.'},
+            ].map(f=>(
+              <div key={f.title} className="feat-card">
+                <div className="feat-icon">{f.icon}</div>
+                <div>
+                  <div className="feat-title">{f.title}</div>
+                  <p className="feat-desc">{f.desc}</p>
                 </div>
-                <div className="step-name">{step.name}</div>
-                <p className="step-desc">{step.desc}</p>
               </div>
             ))}
+          </div>
+        </section>
+
+        {/* ── NUMBERS ── */}
+        <section className="numbers">
+          <div className="numbers-inner">
+            <div className="numbers-left">
+              <div className="label-tag">Por que funciona</div>
+              <h2 className="sec-h2">Feito para quem atende, não para quem gerencia TI.</h2>
+              <p className="sec-p">A plataforma foi construída ouvindo fisioterapeutas reais. Simples de usar no dia a dia, completa quando precisar.</p>
+            </div>
+            <div className="numbers-grid">
+              {[
+                {val:'100',suf:'%',lbl:'focado em\nfisioterapia'},
+                {val:'0',suf:'h',lbl:'de treinamento\npara começar'},
+                {val:'4',suf:'x',lbl:'mais rápido\nque planilhas'},
+                {val:'1',suf:'',lbl:'plataforma para\ntoda a equipe'},
+              ].map(n=>(
+                <div key={n.val} className="num-card">
+                  <div className="num-val">{n.val}<em>{n.suf}</em></div>
+                  <div className="num-lbl" style={{whiteSpace:'pre-line'}}>{n.lbl}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── HOW ── */}
+        <section className="how">
+          <div className="how-grid">
+            <div className="how-right">
+              <h2 className="how-h2">Sua clínica no ar<br />em <span className="lime">minutos.</span></h2>
+              <p className="how-sub">Sem instalação, sem servidor, sem técnico. Você acessa pelo navegador e começa a usar agora mesmo.</p>
+              <Link href="/planos" className="btn-white">
+                Escolher meu plano
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+              </Link>
+            </div>
+            <div className="how-steps">
+              {[
+                {n:'01',name:'Crie sua clínica',desc:'Cadastre o nome, horários e adicione sua equipe. Leva menos de 5 minutos para tudo estar configurado.'},
+                {n:'02',name:'Cadastre os pacientes',desc:'Adicione os pacientes com histórico, contato e informações de saúde. Importe de planilhas se preferir.'},
+                {n:'03',name:'Agende e atenda',desc:'Marque consultas, registre sessões, envie confirmações pelo WhatsApp e acompanhe o financeiro em tempo real.'},
+              ].map(s=>(
+                <div key={s.n} className="how-step">
+                  <div className="how-step-num">{s.n}</div>
+                  <div className="how-step-body">
+                    <div className="how-step-name">{s.name}</div>
+                    <p className="how-step-desc">{s.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
 
         {/* ── CTA ── */}
-        <section className="cta-section">
-          <div className="cta-tag">Comece hoje</div>
-          <h2 className="cta-title serif">
+        <section className="cta">
+          <div className="cta-badge">
+            <span className="cta-badge-dot"/>
+            Planos disponíveis
+          </div>
+          <h2 className="cta-h2">
             Sua clínica merece<br />
-            <em style={{ color: 'var(--gold-light)' }}>uma gestão à altura.</em>
+            <span className="line-accent">uma gestão à altura.</span>
           </h2>
-          <p className="cta-sub">
-            Em breve os planos estarão disponíveis. Por enquanto, explore a plataforma com acesso administrativo.
-          </p>
-          <div className="cta-actions">
-            <Link href="/login" className="btn-cta-primary">
-              Acessar plataforma
+          <p className="cta-sub">Escolha o plano ideal para o tamanho da sua clínica. Sem fidelidade, sem surpresas na fatura.</p>
+          <div className="cta-btns">
+            <Link href="/planos" className="btn-dark">
+              Ver planos e preços
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
             </Link>
-            <button className="btn-cta-ghost" disabled style={{ cursor: 'not-allowed' }}>
-              Ver planos — em breve
-            </button>
+            <span className="btn-outline">Demonstração — em breve</span>
           </div>
         </section>
 
-        {/* ── Footer ── */}
+        {/* ── FOOTER ── */}
         <footer className="footer">
-          <div className="footer-logo">
-            <strong>FisioHub</strong> — Gestão para fisioterapia
-          </div>
-          <div className="footer-copy">
-            © {new Date().getFullYear()} FisioHub. Todos os direitos reservados.
-          </div>
+          <a href="/" className="footer-brand">
+            <div className="footer-brand-icon">
+              <svg viewBox="0 0 14 14" fill="none"><path d="M7 1v4.5M7 8.5V13M1 7h4.5M8.5 7H13" stroke="white" strokeWidth="1.8" strokeLinecap="round"/><circle cx="7" cy="7" r="1.6" fill="white"/></svg>
+            </div>
+            <span className="footer-brand-name">FisioHub</span>
+          </a>
+          <div className="footer-copy">© {new Date().getFullYear()} FisioHub. Todos os direitos reservados.</div>
         </footer>
 
       </div>
