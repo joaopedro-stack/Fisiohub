@@ -385,10 +385,6 @@ export default async function HomePage() {
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                 Ver demonstração
               </button>
-              <span style={{ fontSize: '13px', color: 'var(--muted)' }}>— ou</span>
-              <Link href="/login" style={{ fontSize: '14px', fontWeight: 600, color: 'var(--forest-light)', textDecoration: 'underline', textUnderlineOffset: '3px' }}>
-                acessar como admin →
-              </Link>
             </div>
             <div className="hero-trust fade-up-5">
               <div className="hero-trust-avatars">
@@ -596,9 +592,6 @@ export default async function HomePage() {
         <footer className="footer">
           <div className="footer-logo">
             <strong>FisioHub</strong> — Gestão para fisioterapia
-          </div>
-          <div className="footer-links">
-            <Link href="/login" className="footer-link">Entrar</Link>
           </div>
           <div className="footer-copy">
             © {new Date().getFullYear()} FisioHub. Todos os direitos reservados.
