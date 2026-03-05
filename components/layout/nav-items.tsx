@@ -13,10 +13,11 @@ import {
   Settings,
   BarChart2,
   Wallet,
+  Activity,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-const clinicNavItems: { label: string; href: string; icon: React.ComponentType<{ className?: string }>; adminOnly?: boolean }[] = [
+const clinicNavItems: { label: string; href: string; icon: React.ComponentType<{ className?: string }>; adminOnly?: boolean; exact?: boolean }[] = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { label: 'Pacientes', href: '/patients', icon: Users },
   { label: 'Fisioterapeutas', href: '/physiotherapists', icon: UserCog },
@@ -28,7 +29,8 @@ const clinicNavItems: { label: string; href: string; icon: React.ComponentType<{
 ]
 
 const adminNavItems = [
-  { label: 'Clínicas', href: '/admin', icon: Building2 },
+  { label: 'Clínicas', href: '/admin', icon: Building2, exact: true },
+  { label: 'Monitoramento', href: '/admin/monitoring', icon: Activity },
 ]
 
 interface NavItemsProps {
@@ -47,7 +49,9 @@ export function NavItems({ isAdmin = false, userRole }: NavItemsProps) {
     <nav className="space-y-1">
       {items.map((item) => {
         const Icon = item.icon
-        const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+        const isActive = item.exact
+          ? pathname === item.href
+          : pathname === item.href || pathname.startsWith(item.href + '/')
         return (
           <Link
             key={item.href}
