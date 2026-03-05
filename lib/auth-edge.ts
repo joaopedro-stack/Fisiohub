@@ -4,6 +4,7 @@ import type { NextAuthConfig } from 'next-auth'
 // Edge-compatible auth config (no Prisma, no bcrypt)
 // Used by middleware to validate JWT tokens without DB access
 export const authConfig: NextAuthConfig = {
+  trustHost: true,
   pages: {
     signIn: '/login',
   },

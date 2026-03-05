@@ -90,8 +90,12 @@ export default auth(async function middleware(req) {
     }
   }
 
-  // Protect admin routes
+  // Protect admin routes — only accessible from main domain (no clinic slug)
   if (pathname.startsWith('/admin')) {
+    const mainUrl = host.includes('localhost') ? 'http://localhost:3000' : 'https://fisiohub.com.br'
+    if (slug && slug !== 'app') {
+      return NextResponse.redirect(new URL('/admin', mainUrl))
+    }
     if (!session || session.user.role !== 'SUPER_ADMIN') {
       return NextResponse.redirect(new URL('/login', req.url))
     }

@@ -5,6 +5,10 @@ import { prisma } from '@/lib/prisma'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Header } from '@/components/layout/header'
 
+const MAIN_URL = process.env.NODE_ENV === 'production'
+  ? 'https://fisiohub.com.br'
+  : 'http://localhost:3000'
+
 export default async function ClinicLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
   if (!session) redirect('/login')
@@ -12,13 +16,11 @@ export default async function ClinicLayout({ children }: { children: React.React
   const headersList = await headers()
   const slug = headersList.get('x-tenant-slug') ?? session.user.clinicSlug
 
-  let clinicName: string | undefined
-  try {
-    const clinic = await prisma.clinic.findUnique({ where: { slug } })
-    clinicName = clinic?.name
-  } catch {
-    // Clinic not found, continue without name
+  const clinic = await prisma.clinic.findUnique({ where: { slug } })
+  if (!clinic || !clinic.isActive) {
+    redirect(MAIN_URL)
   }
+  const clinicName = clinic.name
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
