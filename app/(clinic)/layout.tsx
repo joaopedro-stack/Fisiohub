@@ -21,10 +21,11 @@ export default async function ClinicLayout({ children }: { children: React.React
     redirect(MAIN_URL)
   }
   const clinicName = clinic.name
+  const clinicLogo = clinic.logo ?? undefined
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      <Sidebar clinicName={clinicName} userRole={session.user.role} />
+      <Sidebar clinicName={clinicName} clinicLogo={clinicLogo} userRole={session.user.role} />
       <div className="flex flex-col flex-1 overflow-hidden">
         <Header userName={session.user.name} userRole={session.user.role} />
         <main className="flex-1 overflow-y-auto p-4 lg:p-6">{children}</main>

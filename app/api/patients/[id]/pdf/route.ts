@@ -38,6 +38,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
   const clinic = await publicPrisma.clinic.findUnique({ where: { slug } })
   const clinicName = clinic?.name ?? slug
+  const clinicLogo = clinic?.logo ?? undefined
 
   const safeFileName = patient.name
     .normalize('NFD')
@@ -47,7 +48,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     .replace(/\s+/g, '-')
     .toLowerCase()
 
-  const element = createElement(PatientPDF, { patient, clinicName }) as ReactElement<DocumentProps, string | JSXElementConstructor<unknown>>
+  const element = createElement(PatientPDF, { patient, clinicName, clinicLogo }) as ReactElement<DocumentProps, string | JSXElementConstructor<unknown>>
   const buffer = await renderToBuffer(element)
 
   return new NextResponse(new Uint8Array(buffer), {

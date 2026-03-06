@@ -31,8 +31,7 @@ export function Header({ userName = 'Usuário', userRole }: HeaderProps) {
   const router = useRouter()
 
   const handleSignOut = async () => {
-    await signOut({ redirect: false })
-    router.push('/login')
+    await signOut({ callbackUrl: '/login' })
   }
 
   return (

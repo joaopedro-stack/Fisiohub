@@ -1,6 +1,12 @@
 import Link from 'next/link'
 import ScrollEffects from '@/components/scroll-effects'
 
+const PLAN_KEYS: Record<string, string> = {
+  'Básico': 'BASIC',
+  'Profissional': 'PROFESSIONAL',
+  'Enterprise': 'ENTERPRISE',
+}
+
 const plans = [
   {
     name: 'Básico',
@@ -249,13 +255,14 @@ export default function PlanosPage() {
           padding: 12px; border-radius: 100px; font-family: var(--font-mono);
           font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase;
           text-decoration: none; transition: all .2s; margin-bottom: 28px;
-          border: 1px solid rgba(255,255,255,.1); color: var(--mist); cursor: not-allowed; opacity: .6;
+          border: 1px solid rgba(255,255,255,.1); color: var(--mist);
         }
+        .plan-cta:hover { border-color: var(--virid-border); color: var(--virid); }
         .plan-card.featured .plan-cta {
           background: var(--virid); color: var(--void); border-color: var(--virid);
-          opacity: 1; cursor: not-allowed;
           font-family: var(--font-ui); font-size: 13px; font-weight: 700; letter-spacing: 0; text-transform: none;
         }
+        .plan-card.featured .plan-cta:hover { transform: translateY(-2px); box-shadow: var(--glow); }
 
         .plan-divider { height: 1px; background: rgba(0,212,107,.08); margin-bottom: 22px; }
         .plan-features-label {
@@ -431,9 +438,12 @@ export default function PlanosPage() {
                 <div className="plan-period">por mês · cobrado mensalmente</div>
                 <p className="plan-desc">{plan.desc}</p>
 
-                <div className="plan-cta">
-                  {plan.highlight ? 'Em breve — lista de espera' : 'Em breve'}
-                </div>
+                <Link
+                  href={`/cadastro?plan=${PLAN_KEYS[plan.name] ?? 'BASIC'}`}
+                  className="plan-cta"
+                >
+                  {plan.highlight ? 'Começar 14 dias grátis →' : 'Começar grátis →'}
+                </Link>
 
                 <div className="plan-divider" />
                 <div className="plan-features-label">O que está incluído</div>

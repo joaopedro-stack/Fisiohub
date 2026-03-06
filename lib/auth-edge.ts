@@ -9,9 +9,6 @@ export const authConfig: NextAuthConfig = {
     signIn: '/login',
   },
   callbacks: {
-    authorized({ auth }) {
-      return !!auth?.user
-    },
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id

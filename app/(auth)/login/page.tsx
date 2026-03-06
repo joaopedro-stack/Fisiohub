@@ -23,14 +23,6 @@ function LoginFormContent() {
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
 
-  const clinicSlug =
-    typeof window !== 'undefined'
-      ? window.location.hostname.split('.')[0] !== 'localhost' &&
-        window.location.hostname.split('.')[0] !== 'www'
-        ? window.location.hostname.split('.')[0]
-        : undefined
-      : undefined
-
   const {
     register,
     handleSubmit,
@@ -43,7 +35,6 @@ function LoginFormContent() {
       const result = await signIn('credentials', {
         email: data.email,
         password: data.password,
-        clinicSlug: clinicSlug ?? '',
         redirect: false,
       })
       if (result?.error) {

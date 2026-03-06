@@ -1,4 +1,4 @@
-import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer'
+import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer'
 import { formatDate, formatDateTime } from '@/lib/utils'
 
 const BRAND = '#0f172a'
@@ -21,18 +21,33 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     marginBottom: 20,
     paddingBottom: 16,
     borderBottomWidth: 2,
     borderBottomColor: BRAND,
   },
-  headerLeft: { flex: 1 },
-  clinicName: { fontSize: 16, fontFamily: 'Helvetica-Bold', color: BRAND, marginBottom: 2 },
-  headerSub: { fontSize: 8, color: MUTED },
+  headerLeft: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  clinicLogo: { width: 40, height: 40, objectFit: 'contain', borderRadius: 4 },
+  clinicInfo: { flex: 1 },
+  clinicName: { fontSize: 14, fontFamily: 'Helvetica-Bold', color: BRAND, marginBottom: 2 },
+  headerSub: { fontSize: 7, color: MUTED },
   headerRight: { alignItems: 'flex-end' },
-  docTitle: { fontSize: 12, fontFamily: 'Helvetica-Bold', color: BRAND, marginBottom: 2 },
+  docTitle: { fontSize: 11, fontFamily: 'Helvetica-Bold', color: BRAND, marginBottom: 2 },
   docDate: { fontSize: 8, color: MUTED },
+  fisiohubBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+    backgroundColor: '#f0fdf4',
+    paddingVertical: 2,
+    paddingHorizontal: 6,
+    borderRadius: 3,
+    borderWidth: 1,
+    borderColor: '#bbf7d0',
+  },
+  fisiohubText: { fontSize: 7, color: '#15803d', fontFamily: 'Helvetica-Bold' },
   // Section
   section: { marginBottom: 14 },
   sectionTitle: {
@@ -180,6 +195,7 @@ interface Patient {
 interface PatientPDFProps {
   patient: Patient
   clinicName: string
+  clinicLogo?: string
 }
 
 function Field({ label, value }: { label: string; value?: string | null }) {
@@ -200,7 +216,7 @@ function FieldFull({ label, value }: { label: string; value?: string | null }) {
   )
 }
 
-export function PatientPDF({ patient, clinicName }: PatientPDFProps) {
+export function PatientPDF({ patient, clinicName, clinicLogo }: PatientPDFProps) {
   const issuedAt = formatDateTime(new Date())
 
   return (
@@ -209,8 +225,15 @@ export function PatientPDF({ patient, clinicName }: PatientPDFProps) {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <Text style={styles.clinicName}>{clinicName}</Text>
-            <Text style={styles.headerSub}>FisioHub — Gestão de Fisioterapia</Text>
+            {clinicLogo && (
+              <Image src={clinicLogo} style={styles.clinicLogo} />
+            )}
+            <View style={styles.clinicInfo}>
+              <Text style={styles.clinicName}>{clinicName}</Text>
+              <View style={styles.fisiohubBadge}>
+                <Text style={styles.fisiohubText}>⚡ FisioHub</Text>
+              </View>
+            </View>
           </View>
           <View style={styles.headerRight}>
             <Text style={styles.docTitle}>Prontuário do Paciente</Text>
@@ -342,7 +365,7 @@ export function PatientPDF({ patient, clinicName }: PatientPDFProps) {
 
         {/* Footer */}
         <View style={styles.footer} fixed>
-          <Text style={styles.footerText}>{clinicName} · Prontuário de {patient.name}</Text>
+          <Text style={styles.footerText}>{clinicName} · Prontuário de {patient.name} · Gerado por FisioHub</Text>
           <Text style={styles.footerText} render={({ pageNumber, totalPages }) => `Página ${pageNumber} de ${totalPages}`} />
         </View>
       </Page>

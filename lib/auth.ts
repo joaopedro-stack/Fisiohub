@@ -9,7 +9,6 @@ import { z } from 'zod'
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
-  clinicSlug: z.string().optional(),
 })
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -20,56 +19,50 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       credentials: {
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
-        clinicSlug: { label: 'Clinic Slug', type: 'text' },
       },
       async authorize(credentials) {
         const parsed = loginSchema.safeParse(credentials)
         if (!parsed.success) return null
 
-        const { email, password, clinicSlug } = parsed.data
+        const { email, password } = parsed.data
 
-        // Super admin login (no clinic slug or app slug)
-        if (!clinicSlug || clinicSlug === 'app' || clinicSlug === 'localhost') {
-          const superAdmin = await prisma.superAdmin.findUnique({
-            where: { email },
-          })
-          if (!superAdmin) return null
+        // 1. Try super admin
+        const superAdmin = await prisma.superAdmin.findUnique({ where: { email } })
+        if (superAdmin) {
+          const match = await bcrypt.compare(password, superAdmin.password)
+          if (!match) return null
+          return { id: superAdmin.id, email: superAdmin.email, name: superAdmin.name, role: 'SUPER_ADMIN', clinicSlug: 'app' }
+        }
 
-          const passwordMatch = await bcrypt.compare(password, superAdmin.password)
-          if (!passwordMatch) return null
+        // 2. Find which clinic this email belongs to by scanning all active clinics
+        const clinics = await prisma.clinic.findMany({
+          where: { isActive: true },
+          select: { slug: true },
+        })
+
+        for (const clinic of clinics) {
+          const tenantPrisma = getTenantPrisma(clinic.slug)
+          let user
+          try {
+            user = await tenantPrisma.user.findUnique({ where: { email, isActive: true } })
+          } catch {
+            continue
+          }
+          if (!user) continue
+
+          const match = await bcrypt.compare(password, user.password)
+          if (!match) return null
 
           return {
-            id: superAdmin.id,
-            email: superAdmin.email,
-            name: superAdmin.name,
-            role: 'SUPER_ADMIN',
-            clinicSlug: 'app',
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+            clinicSlug: clinic.slug,
           }
         }
 
-        // Check clinic exists and is active
-        const clinic = await prisma.clinic.findUnique({
-          where: { slug: clinicSlug, isActive: true },
-        })
-        if (!clinic) return null
-
-        // Tenant user login
-        const tenantPrisma = getTenantPrisma(clinicSlug)
-        const user = await tenantPrisma.user.findUnique({
-          where: { email, isActive: true },
-        })
-        if (!user) return null
-
-        const passwordMatch = await bcrypt.compare(password, user.password)
-        if (!passwordMatch) return null
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          clinicSlug,
-        }
+        return null
       },
     }),
   ],
