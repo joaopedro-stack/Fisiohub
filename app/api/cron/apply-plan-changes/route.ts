@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
       stripeSubscriptionId: { not: null },
       subscriptionStatus: 'active',
     } as never,
-  })
+  }) as unknown as { id: string; slug: string; stripeSubscriptionId: string | null; pendingPlan: string | null; pendingPlanAt: Date | null }[]
 
   const results: { slug: string; plan?: string | null; status: string; error?: string }[] = []
 
@@ -35,10 +35,10 @@ export async function GET(req: NextRequest) {
       await prisma.clinic.update({
         where: { id: clinic.id },
         data: {
-          plan: clinic.pendingPlan!,
+          plan: clinic.pendingPlan! as never,
           pendingPlan: null,
           pendingPlanAt: null,
-        },
+        } as never,
       })
 
       results.push({ slug: clinic.slug, plan: clinic.pendingPlan, status: 'applied' })
