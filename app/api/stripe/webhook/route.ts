@@ -3,6 +3,9 @@ import { stripe } from '@/lib/stripe'
 import { prisma } from '@/lib/prisma'
 import Stripe from 'stripe'
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const pub = prisma as any
+
 export async function POST(req: NextRequest) {
   const body = await req.text()
   const sig = req.headers.get('stripe-signature')
@@ -36,7 +39,7 @@ export async function POST(req: NextRequest) {
 
       const plan = (meta.plan ?? 'BASIC') as 'BASIC' | 'PROFESSIONAL' | 'ENTERPRISE'
 
-      await prisma.clinic.update({
+      await pub.clinic.update({
         where: { slug: meta.clinicSlug },
         data: {
           stripeSubscriptionId: sub.id,
@@ -55,12 +58,15 @@ export async function POST(req: NextRequest) {
       if (!meta.clinicSlug) break
 
       const plan = (meta.plan ?? 'BASIC') as 'BASIC' | 'PROFESSIONAL' | 'ENTERPRISE'
+      const rawEnd = (sub as unknown as { current_period_end?: number }).current_period_end
+      const periodEnd = rawEnd ? new Date(rawEnd * 1000) : null
 
-      await prisma.clinic.update({
+      await pub.clinic.update({
         where: { slug: meta.clinicSlug },
         data: {
           subscriptionStatus: sub.status,
           plan,
+          currentPeriodEnd: periodEnd,
         },
       })
       break
@@ -71,7 +77,7 @@ export async function POST(req: NextRequest) {
       const meta = sub.metadata
       if (!meta.clinicSlug) break
 
-      await prisma.clinic.update({
+      await pub.clinic.update({
         where: { slug: meta.clinicSlug },
         data: {
           subscriptionStatus: 'canceled',
@@ -86,7 +92,7 @@ export async function POST(req: NextRequest) {
       const customerId = invoice.customer as string
       if (!customerId) break
 
-      await prisma.clinic.updateMany({
+      await pub.clinic.updateMany({
         where: { stripeCustomerId: customerId },
         data: { subscriptionStatus: 'past_due' },
       })

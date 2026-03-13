@@ -3,6 +3,9 @@ import { auth } from '@/lib/auth'
 import { stripe, STRIPE_PRICE_IDS } from '@/lib/stripe'
 import { prisma } from '@/lib/prisma'
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const pub = prisma as any
+
 const PLAN_RANK: Record<string, number> = { BASIC: 1, PROFESSIONAL: 2, ENTERPRISE: 3 }
 
 // POST — upgrade (immediate + prorata) or schedule downgrade (end of period)
@@ -17,7 +20,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Plano inválido' }, { status: 400 })
     }
 
-    const clinic = await prisma.clinic.findFirst({
+    const clinic = await pub.clinic.findFirst({
       where: { slug: session.user.clinicSlug ?? '' },
     })
     if (!clinic) return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 404 })
@@ -39,8 +42,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Assinatura sem item de preço' }, { status: 422 })
     }
 
-    // current_period_end é Unix timestamp no Stripe
-    // Em versões mais novas da API o campo pode ser renomeado; fallback para 30 dias
     const rawPeriodEnd = (sub as unknown as { current_period_end?: number }).current_period_end
     const periodEnd =
       rawPeriodEnd && !isNaN(rawPeriodEnd)
@@ -48,16 +49,13 @@ export async function POST(req: NextRequest) {
         : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
 
     if (isUpgrade) {
-      // ── UPGRADE: cobrar diferença agora via prorata ──────────────────────────
       await stripe.subscriptions.update(clinic.stripeSubscriptionId, {
         proration_behavior: 'always_invoice',
         items: [{ id: currentItem.id, price: STRIPE_PRICE_IDS[newPlan] }],
         metadata: { ...sub.metadata, plan: newPlan },
       })
 
-      // Não atualizamos plan aqui — o webhook customer.subscription.updated fará isso.
-      // Só limpamos pendingPlan caso haja um downgrade agendado que o upgrade cancela.
-      await prisma.clinic.update({
+      await pub.clinic.update({
         where: { id: clinic.id },
         data: {
           pendingPlan: null,
@@ -67,11 +65,10 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json({ type: 'upgrade', effective: 'immediate' })
     } else {
-      // ── DOWNGRADE: agendar para fim do período atual ─────────────────────────
-      await prisma.clinic.update({
+      await pub.clinic.update({
         where: { id: clinic.id },
         data: {
-          pendingPlan: newPlan as 'BASIC' | 'PROFESSIONAL' | 'ENTERPRISE',
+          pendingPlan: newPlan,
           pendingPlanAt: periodEnd,
           currentPeriodEnd: periodEnd,
         },
@@ -93,12 +90,12 @@ export async function DELETE() {
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     if (session.user.role !== 'ADMIN') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-    const clinic = await prisma.clinic.findFirst({
+    const clinic = await pub.clinic.findFirst({
       where: { slug: session.user.clinicSlug ?? '' },
     })
     if (!clinic) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-    await prisma.clinic.update({
+    await pub.clinic.update({
       where: { id: clinic.id },
       data: {
         pendingPlan: null,

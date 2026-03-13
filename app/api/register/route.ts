@@ -69,7 +69,8 @@ export async function POST(req: NextRequest) {
       throw err
     }
 
-    await prisma.clinic.update({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (prisma as any).clinic.update({
       where: { id: clinic.id },
       data: { subscriptionStatus: 'trialing', trialEndsAt },
     })
