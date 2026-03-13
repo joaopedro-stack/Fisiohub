@@ -109,182 +109,200 @@ export default function LoginPage() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&family=Syne:wght@400;500;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600;1,700&family=Nunito:wght@400;500;600;700;800&display=swap');
+
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         :root {
-          --void:         #030A06;
-          --abyss:        #060F09;
-          --deep:         #0C1F12;
-          --virid:        #00D46B;
-          --virid-border: rgba(0,212,107,.2);
-          --lime:         #B8F000;
-          --mist:         #8FA898;
-          --white:        #F0FAF4;
-          --font-display: 'DM Serif Display', Georgia, serif;
-          --font-ui:      'Syne', system-ui, sans-serif;
-          --font-mono:    'DM Mono', 'Courier New', monospace;
-          --glow:         0 0 48px rgba(0,212,107,.28), 0 0 100px rgba(0,212,107,.1);
-          --spring:       cubic-bezier(.34,1.56,.64,1);
+          --cream:       #F8F6F2;
+          --cream-2:     #EEE9E0;
+          --white:       #FFFFFF;
+          --forest:      #1B4A34;
+          --forest-mid:  #2D6E4A;
+          --forest-lite: #4D9668;
+          --sage:        #7BAA88;
+          --sage-2:      #B2CAB9;
+          --sage-bg:     #EAF1EC;
+          --ink:         #1A1E1C;
+          --ink-2:       #4A5650;
+          --ink-3:       #8A9490;
+          --font-d:      'Playfair Display', Georgia, serif;
+          --font-ui:     'Nunito', system-ui, sans-serif;
+          --spring:      cubic-bezier(.34,1.56,.64,1);
+          --sh-md:       0 8px 32px rgba(27,74,52,.11);
         }
 
         .lp-wrap {
           font-family: var(--font-ui);
           min-height: 100vh; display: flex;
-          background: var(--void); color: var(--white);
+          background: var(--forest); color: var(--white);
           -webkit-font-smoothing: antialiased;
         }
 
-        /* ── LEFT PANEL ── */
+        /* ── LEFT PANEL (Forest green brand) ── */
         .lp-left {
           flex: 1.1; position: relative; overflow: hidden;
           display: flex; flex-direction: column; justify-content: space-between;
-          padding: 48px 52px; min-height: 100vh;
+          padding: 52px 56px; min-height: 100vh;
         }
+        /* Subtle dot grid */
         .lp-left::before {
           content: ''; position: absolute; inset: 0; pointer-events: none;
-          background-image: radial-gradient(rgba(0,212,107,.055) 1px, transparent 1px);
-          background-size: 24px 24px;
+          background-image: radial-gradient(rgba(255,255,255,.07) 1px, transparent 1px);
+          background-size: 26px 26px;
         }
+        /* Diagonal stripe overlay */
         .lp-left::after {
           content: ''; position: absolute; inset: 0; pointer-events: none;
-          background-image: repeating-linear-gradient(-54deg, transparent, transparent 90px, rgba(0,212,107,.018) 90px, rgba(0,212,107,.018) 91px);
+          background-image: repeating-linear-gradient(-52deg, transparent, transparent 88px, rgba(255,255,255,.025) 88px, rgba(255,255,255,.025) 89px);
         }
-        .lp-left-glow {
-          position: absolute; width: 500px; height: 500px; border-radius: 50%;
-          background: radial-gradient(circle, rgba(0,212,107,.1) 0%, transparent 65%);
-          bottom: -100px; left: -100px; pointer-events: none;
+        .lp-blob-1 {
+          position: absolute; width: 560px; height: 560px; border-radius: 50%;
+          background: radial-gradient(circle, rgba(75,150,104,.35) 0%, transparent 68%);
+          bottom: -140px; left: -100px; pointer-events: none;
+          animation: blobShift 12s ease-in-out infinite;
         }
-        .lp-left-glow-2 {
-          position: absolute; width: 300px; height: 300px; border-radius: 50%;
-          background: radial-gradient(circle, rgba(184,240,0,.06) 0%, transparent 70%);
-          top: 80px; right: -60px; pointer-events: none;
+        .lp-blob-2 {
+          position: absolute; width: 360px; height: 360px; border-radius: 50%;
+          background: radial-gradient(circle, rgba(178,202,185,.15) 0%, transparent 70%);
+          top: 40px; right: -80px; pointer-events: none;
+          animation: blobShift 16s 4s ease-in-out infinite reverse;
+        }
+        @keyframes blobShift {
+          0%,100% { transform: translate(0,0) scale(1); }
+          50% { transform: translate(16px,-22px) scale(1.04); }
         }
 
-        .lp-left-content { position: relative; z-index: 1; display: flex; flex-direction: column; height: 100%; }
+        .lp-left-inner { position: relative; z-index: 1; display: flex; flex-direction: column; height: 100%; }
 
-        .lp-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+        .lp-logo { display: flex; align-items: center; gap: 11px; text-decoration: none; }
         .lp-logo-mark {
-          width: 30px; height: 30px; border-radius: 7px; background: var(--virid);
+          width: 34px; height: 34px; border-radius: 9px;
+          background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.2);
           display: flex; align-items: center; justify-content: center; flex-shrink: 0;
         }
-        .lp-logo-mark svg { width: 14px; height: 14px; }
-        .lp-logo-name { font-family: var(--font-ui); font-size: 15px; font-weight: 800; color: var(--white); }
-        .lp-logo-name b { color: var(--virid); }
+        .lp-logo-mark svg { width: 16px; height: 16px; }
+        .lp-logo-name { font-size: 16px; font-weight: 800; color: rgba(255,255,255,.9); }
+        .lp-logo-name b { color: rgba(178,202,185,.9); }
 
         .lp-mid { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 60px 0; }
         .lp-eyebrow {
-          font-family: var(--font-mono); font-size: 10px; letter-spacing: .22em; text-transform: uppercase; color: var(--virid);
-          display: flex; align-items: center; gap: 12px; margin-bottom: 24px;
+          font-size: 10.5px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase;
+          color: rgba(178,202,185,.8); display: flex; align-items: center; gap: 10px; margin-bottom: 24px;
         }
-        .lp-eyebrow::before { content: ''; width: 28px; height: 1px; background: var(--virid); display: block; }
+        .lp-eyebrow::before { content: ''; width: 22px; height: 1.5px; background: rgba(178,202,185,.6); display: block; border-radius: 2px; }
+
         .lp-headline {
-          font-family: var(--font-display); font-size: clamp(44px, 5.5vw, 76px);
-          font-weight: 400; line-height: .91; letter-spacing: -.035em; color: var(--white); margin-bottom: 32px;
+          font-family: var(--font-d);
+          font-size: clamp(44px, 5.5vw, 76px);
+          font-weight: 700; line-height: .91; letter-spacing: -.032em; color: var(--white); margin-bottom: 40px;
         }
-        .lp-headline em { font-style: italic; color: transparent; -webkit-text-stroke: 1px rgba(0,212,107,.6); }
+        .lp-headline em { font-style: italic; color: rgba(178,202,185,.9); }
 
-        .lp-stats { display: flex; flex-direction: column; gap: 0; border-top: 1px solid rgba(0,212,107,.1); }
-        .lp-stat {
-          display: flex; align-items: center; justify-content: space-between;
-          padding: 14px 0; border-bottom: 1px solid rgba(0,212,107,.06);
+        .lp-features { display: flex; flex-direction: column; gap: 12px; }
+        .lp-feat {
+          display: flex; align-items: center; gap: 12px;
+          padding: 12px 16px; border-radius: 12px;
+          background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.08);
+          backdrop-filter: blur(8px);
+          transition: background .2s;
         }
-        .lp-stat-name { font-family: var(--font-mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--mist); }
-        .lp-stat-val { font-family: var(--font-ui); font-size: 13px; font-weight: 700; color: var(--white); }
-        .lp-stat-badge {
-          font-family: var(--font-mono); font-size: 9.5px; letter-spacing: .08em;
-          padding: 3px 10px; border-radius: 100px;
-          background: rgba(0,212,107,.1); color: var(--virid); border: 1px solid var(--virid-border);
+        .lp-feat:hover { background: rgba(255,255,255,.1); }
+        .lp-feat-icon {
+          width: 36px; height: 36px; border-radius: 9px; flex-shrink: 0;
+          background: rgba(178,202,185,.15); border: 1px solid rgba(178,202,185,.2);
+          display: flex; align-items: center; justify-content: center; font-size: 15px;
         }
+        .lp-feat-name { font-size: 13.5px; font-weight: 700; color: rgba(255,255,255,.85); margin-bottom: 2px; }
+        .lp-feat-desc { font-size: 11.5px; font-weight: 500; color: rgba(178,202,185,.6); }
 
-        .lp-footer-text { font-family: var(--font-mono); font-size: 10px; letter-spacing: .06em; color: rgba(143,168,152,.25); }
+        .lp-footer-text { font-size: 11px; font-weight: 500; color: rgba(178,202,185,.3); letter-spacing: .03em; }
 
         /* ── DIVIDER ── */
         .lp-divider {
-          width: 1px; background: rgba(0,212,107,.07); flex-shrink: 0;
-          position: relative;
+          width: 1px; background: rgba(255,255,255,.08); flex-shrink: 0; position: relative;
         }
         .lp-divider::after {
           content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
           width: 8px; height: 8px; border-radius: 50%;
-          background: var(--virid); opacity: .3;
-          box-shadow: 0 0 12px rgba(0,212,107,.4);
+          background: rgba(178,202,185,.5);
+          box-shadow: 0 0 12px rgba(178,202,185,.4);
         }
 
-        /* ── RIGHT PANEL ── */
+        /* ── RIGHT PANEL (Form) ── */
         .lp-right {
           flex: 0.9; display: flex; flex-direction: column; align-items: center; justify-content: center;
-          padding: 48px 60px; background: var(--abyss);
+          padding: 52px 64px; background: #F5F2EE;
           position: relative;
         }
         .lp-right::before {
-          content: ''; position: absolute; top: 0; left: 0; width: 1px; height: 100%;
-          background: linear-gradient(180deg, transparent, rgba(0,212,107,.12), transparent);
+          content: ''; position: absolute; inset: 0; pointer-events: none;
+          background-image: radial-gradient(rgba(27,74,52,.04) 1.2px, transparent 1.2px);
+          background-size: 28px 28px;
         }
+        .lp-right::after {
+          content: ''; position: absolute; top: 0; left: 0; width: 1px; height: 100%;
+          background: linear-gradient(180deg, transparent, rgba(27,74,52,.12), transparent);
+        }
+        .lp-form-wrap { position: relative; z-index: 1; }
         .lp-form-wrap { width: 100%; max-width: 380px; }
 
-        .lf-heading {
-          margin-bottom: 8px;
-        }
+        /* form heading */
+        .lf-heading { margin-bottom: 32px; }
         .lf-heading-eyebrow {
-          font-family: var(--font-mono); font-size: 10px; letter-spacing: .2em; text-transform: uppercase;
-          color: var(--virid); display: flex; align-items: center; gap: 10px; margin-bottom: 16px;
+          font-size: 10.5px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase;
+          color: var(--forest); display: flex; align-items: center; gap: 10px; margin-bottom: 16px;
         }
-        .lf-heading-eyebrow::before { content: ''; width: 20px; height: 1px; background: var(--virid); display: block; }
+        .lf-heading-eyebrow::before { content: ''; width: 20px; height: 1.5px; background: var(--forest-lite); display: block; border-radius: 2px; }
         .lf-title {
-          font-family: var(--font-display); font-size: 38px; font-weight: 400;
-          letter-spacing: -.025em; line-height: .95; color: var(--white); margin-bottom: 8px;
+          font-family: var(--font-d); font-size: 38px; font-weight: 700;
+          letter-spacing: -.025em; line-height: .93; color: var(--ink); margin-bottom: 10px;
         }
-        .lf-title em { font-style: italic; color: var(--virid); }
-        .lf-sub {
-          font-family: var(--font-ui); font-size: 14px; color: var(--mist); line-height: 1.6; margin-bottom: 36px;
-        }
+        .lf-title em { font-style: italic; color: var(--forest); }
+        .lf-sub { font-size: 14px; font-weight: 500; color: var(--ink-2); line-height: 1.65; }
 
-        /* form */
+        /* form fields */
         .lf-form { display: flex; flex-direction: column; gap: 20px; }
-        .lf-field { display: flex; flex-direction: column; gap: 8px; }
-        .lf-label {
-          font-family: var(--font-mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--mist);
-        }
+        .lf-field { display: flex; flex-direction: column; gap: 7px; }
+        .lf-label { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-2); }
         .lf-input {
           width: 100%; padding: 12px 16px;
-          background: var(--deep); border: 1px solid rgba(0,212,107,.12);
-          border-radius: 10px; font-family: var(--font-ui); font-size: 14px; color: var(--white);
-          outline: none; caret-color: var(--virid);
+          background: var(--white); border: 1.5px solid rgba(27,74,52,.12);
+          border-radius: 12px; font-family: var(--font-ui); font-size: 15px; color: var(--ink);
+          outline: none; caret-color: var(--forest);
           transition: border-color .2s, box-shadow .2s;
         }
-        .lf-input::placeholder { color: rgba(143,168,152,.35); }
-        .lf-input:focus { border-color: rgba(0,212,107,.4); box-shadow: 0 0 0 3px rgba(0,212,107,.07); }
-        .lf-input.lf-input-err { border-color: rgba(255,77,109,.4); }
-        .lf-input.lf-input-err:focus { box-shadow: 0 0 0 3px rgba(255,77,109,.07); }
-        .lf-err-msg { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .04em; color: #FF6B8A; }
+        .lf-input::placeholder { color: rgba(138,148,144,.5); }
+        .lf-input:focus { border-color: var(--forest-lite); box-shadow: 0 0 0 3px rgba(27,74,52,.07); }
+        .lf-input.lf-input-err { border-color: rgba(200,60,40,.45); }
+        .lf-input.lf-input-err:focus { box-shadow: 0 0 0 3px rgba(200,60,40,.08); }
+        .lf-err-msg { font-size: 11.5px; font-weight: 600; color: #C83C28; }
         .lf-pw-wrap { position: relative; }
-        .lf-pw-wrap .lf-input { padding-right: 44px; }
+        .lf-pw-wrap .lf-input { padding-right: 46px; }
         .lf-eye {
           position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
-          background: none; border: none; cursor: pointer; color: var(--mist);
+          background: none; border: none; cursor: pointer; color: var(--ink-3);
           display: flex; align-items: center; transition: color .15s;
         }
-        .lf-eye:hover { color: var(--virid); }
+        .lf-eye:hover { color: var(--forest); }
 
         .lf-submit {
           display: flex; align-items: center; justify-content: center; gap: 8px;
-          width: 100%; padding: 13px; border-radius: 100px;
-          font-family: var(--font-ui); font-size: 14px; font-weight: 700;
-          background: var(--virid); color: var(--void); border: none; cursor: pointer;
-          transition: transform .25s var(--spring), box-shadow .25s; margin-top: 4px;
+          width: 100%; padding: 14px;
+          border-radius: 100px; font-family: var(--font-ui); font-size: 15px; font-weight: 700;
+          background: var(--forest); color: var(--white); border: none; cursor: pointer; margin-top: 4px;
+          transition: transform .25s var(--spring), box-shadow .25s, background .2s;
         }
-        .lf-submit:hover:not(:disabled) { transform: translateY(-2px); box-shadow: var(--glow); }
+        .lf-submit:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(27,74,52,.3); background: var(--forest-mid); }
         .lf-submit:disabled { opacity: .6; cursor: not-allowed; }
         @keyframes spin { to { transform: rotate(360deg); } }
         .lf-spin { animation: spin 1s linear infinite; }
 
         .lf-back {
           margin-top: 28px; text-align: center;
-          font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase;
-          color: var(--mist);
+          font-size: 13px; font-weight: 600; color: var(--ink-3);
         }
-        .lf-back a { color: var(--virid); text-decoration: none; transition: opacity .2s; }
+        .lf-back a { color: var(--forest); text-decoration: none; font-weight: 700; transition: opacity .2s; }
         .lf-back a:hover { opacity: .75; }
 
         .lf-skeleton { height: 240px; }
@@ -292,7 +310,7 @@ export default function LoginPage() {
         @media(max-width:860px) {
           .lp-left { display: none; }
           .lp-divider { display: none; }
-          .lp-right { flex: 1; padding: 48px 28px; background: var(--void); }
+          .lp-right { flex: 1; padding: 48px 24px; background: var(--cream); }
           .lp-right::before { display: none; }
         }
       `}</style>
@@ -301,15 +319,15 @@ export default function LoginPage() {
 
         {/* ── LEFT PANEL ── */}
         <div className="lp-left">
-          <div className="lp-left-glow" />
-          <div className="lp-left-glow-2" />
+          <div className="lp-blob-1" />
+          <div className="lp-blob-2" />
 
-          <div className="lp-left-content">
+          <div className="lp-left-inner">
             <a href="/" className="lp-logo">
               <div className="lp-logo-mark">
-                <svg viewBox="0 0 14 14" fill="none">
-                  <path d="M7 1.5v3.5M7 9V12.5M1.5 7h3.5M9 7h3.5" stroke="#030A06" strokeWidth="1.9" strokeLinecap="round"/>
-                  <circle cx="7" cy="7" r="1.6" fill="#030A06"/>
+                <svg viewBox="0 0 16 16" fill="none">
+                  <path d="M8 2v4M8 10v4M2 8h4M10 8h4" stroke="rgba(255,255,255,.9)" strokeWidth="2" strokeLinecap="round"/>
+                  <circle cx="8" cy="8" r="2" fill="rgba(255,255,255,.9)"/>
                 </svg>
               </div>
               <span className="lp-logo-name">Fisio<b>Hub</b></span>
@@ -321,23 +339,21 @@ export default function LoginPage() {
                 Sua clínica<br />
                 <em>te espera.</em>
               </h1>
-              <div className="lp-stats">
-                <div className="lp-stat">
-                  <span className="lp-stat-name">Agenda</span>
-                  <span className="lp-stat-badge">Visual completa</span>
-                </div>
-                <div className="lp-stat">
-                  <span className="lp-stat-name">Prontuários</span>
-                  <span className="lp-stat-badge">PDF automático</span>
-                </div>
-                <div className="lp-stat">
-                  <span className="lp-stat-name">Financeiro</span>
-                  <span className="lp-stat-badge">DRE integrado</span>
-                </div>
-                <div className="lp-stat">
-                  <span className="lp-stat-name">WhatsApp</span>
-                  <span className="lp-stat-badge">Envio automático</span>
-                </div>
+              <div className="lp-features">
+                {[
+                  { icon: '📅', name: 'Agenda visual', desc: 'Conflitos detectados automaticamente' },
+                  { icon: '📋', name: 'Prontuários', desc: 'PDF gerado com um clique' },
+                  { icon: '💰', name: 'Financeiro', desc: 'DRE mensal consolidado' },
+                  { icon: '💬', name: 'WhatsApp', desc: 'Confirmações automáticas' },
+                ].map((f) => (
+                  <div key={f.name} className="lp-feat">
+                    <div className="lp-feat-icon">{f.icon}</div>
+                    <div>
+                      <div className="lp-feat-name">{f.name}</div>
+                      <div className="lp-feat-desc">{f.desc}</div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 

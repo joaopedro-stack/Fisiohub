@@ -112,6 +112,7 @@ model Patient {
   cpf               String?       @unique
   birthDate         DateTime?
   gender            Gender?
+  cep               String?
   address           String?
   healthInsurance   String?
   emergencyContact  String?
@@ -221,10 +222,37 @@ model Invoice {
   patient                 Patient           @relation(fields: [patientId], references: [id])
   appointments            Appointment[]
   payments                Payment[]
+  installments            Installment[]
 
   @@index([patientId])
   @@index([status])
   @@index([issuedAt])
+}
+
+model PriceTable {
+  id        String           @id @default(cuid())
+  name      String
+  type      AppointmentType?
+  price     Decimal          @db.Decimal(10, 2)
+  isActive  Boolean          @default(true)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+}
+
+model Installment {
+  id        String        @id @default(cuid())
+  invoiceId String
+  number    Int
+  amount    Decimal       @db.Decimal(10, 2)
+  dueDate   DateTime
+  paidAt    DateTime?
+  method    PaymentMethod?
+  notes     String?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  invoice   Invoice       @relation(fields: [invoiceId], references: [id])
+
+  @@index([invoiceId])
 }
 
 model Payment {

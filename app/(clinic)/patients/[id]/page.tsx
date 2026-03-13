@@ -10,12 +10,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Separator } from '@/components/ui/separator'
 import {
   ArrowLeft, Phone, Mail, MapPin, Heart, Shield,
-  Calendar, ClipboardList, Clock, User, AlertCircle,
+  Calendar, ClipboardList, Clock, User, AlertCircle, DollarSign,
 } from 'lucide-react'
 import Link from 'next/link'
 import { PatientEditButton } from '@/components/features/patients/patient-edit-button'
 import { AnamnesisButton } from '@/components/features/anamnesis/anamnesis-button'
 import { PrintButton } from '@/components/features/patients/print-button'
+import { PatientFinancial } from '@/components/features/patients/patient-financial'
 
 const GENDER_LABELS: Record<string, string> = {
   MALE: 'Masculino',
@@ -310,6 +311,10 @@ export default async function PatientProfilePage({ params }: { params: Promise<{
                 Agendamentos ({patient.appointments.length})
               </TabsTrigger>
               <TabsTrigger value="anamnesis">Anamnese</TabsTrigger>
+              <TabsTrigger value="financeiro" className="gap-1.5">
+                <DollarSign className="h-3.5 w-3.5" />
+                Financeiro
+              </TabsTrigger>
             </TabsList>
 
             {/* ── Prontuário (sessions) ──────────────────────── */}
@@ -487,6 +492,10 @@ export default async function PatientProfilePage({ params }: { params: Promise<{
                   )}
                 </CardContent>
               </Card>
+            </TabsContent>
+            {/* ── Financeiro ────────────────────────────────── */}
+            <TabsContent value="financeiro" className="mt-0">
+              <PatientFinancial patientId={patient.id} />
             </TabsContent>
           </Tabs>
         </div>

@@ -15,7 +15,7 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { ConfirmDeleteDialog } from '@/components/shared/confirm-dialog'
 import { PatientForm } from './patient-form'
 import { useRouter } from 'next/navigation'
@@ -226,20 +226,22 @@ export function PatientTable() {
         </p>
       )}
 
-      <Dialog open={showForm} onOpenChange={setShowForm}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>{editPatient ? 'Editar Paciente' : 'Novo Paciente'}</DialogTitle>
-          </DialogHeader>
-          <PatientForm
-            patient={editPatient}
-            onSuccess={() => {
-              setShowForm(false)
-              queryClient.invalidateQueries({ queryKey: ['patients'] })
-            }}
-          />
-        </DialogContent>
-      </Dialog>
+      <Sheet open={showForm} onOpenChange={setShowForm}>
+        <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>{editPatient ? 'Editar Paciente' : 'Novo Paciente'}</SheetTitle>
+          </SheetHeader>
+          <div className="mt-4">
+            <PatientForm
+              patient={editPatient}
+              onSuccess={() => {
+                setShowForm(false)
+                queryClient.invalidateQueries({ queryKey: ['patients'] })
+              }}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <ConfirmDeleteDialog
         open={!!patientToDelete}

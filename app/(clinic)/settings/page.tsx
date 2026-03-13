@@ -5,10 +5,11 @@ import { useSession } from 'next-auth/react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Loader2, Check, Plus, Trash2, MapPin, Link, ExternalLink, Copy, Upload, X, ImageIcon, CreditCard, Zap, Building2 } from 'lucide-react'
+import { Loader2, Check, Plus, Trash2, MapPin, Link, ExternalLink, Copy, Upload, X, ImageIcon, CreditCard, Zap, Building2, Shield, TrendingUp, TrendingDown, DollarSign } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -16,6 +17,7 @@ import { Separator } from '@/components/ui/separator'
 import { useColorTheme, type ColorTheme } from '@/hooks/use-color-theme'
 import type { ClinicSettings, Room } from '@/types'
 import { cn } from '@/lib/utils'
+import { PriceTableSettings } from '@/components/features/finance/price-table-settings'
 
 const colorOptions: { value: ColorTheme; label: string; bg: string }[] = [
   { value: 'default', label: 'Preto',   bg: 'bg-[oklch(0.205_0_0)]' },
@@ -205,6 +207,7 @@ export default function SettingsPage() {
           {isAdmin && <TabsTrigger value="clinic" className="flex-1">Clínica</TabsTrigger>}
           {isAdmin && <TabsTrigger value="rooms" className="flex-1">Salas</TabsTrigger>}
           {isAdmin && <TabsTrigger value="booking" className="flex-1">Agendamento</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="prices" className="flex-1">Preços</TabsTrigger>}
           {isAdmin && <TabsTrigger value="plan" className="flex-1">Plano</TabsTrigger>}
         </TabsList>
 
@@ -492,6 +495,26 @@ export default function SettingsPage() {
           </TabsContent>
         )}
 
+        {/* ── Prices ───────────────────────────────────────── */}
+        {isAdmin && (
+          <TabsContent value="prices" className="mt-4 animate-in fade-in duration-200">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                  Tabela de preços
+                </CardTitle>
+                <CardDescription>
+                  Defina os valores por tipo de atendimento para referência ao criar faturas.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <PriceTableSettings />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+
         {/* ── Plan / Billing ───────────────────────────────── */}
         {isAdmin && (
           <TabsContent value="plan" className="mt-4 animate-in fade-in duration-200">
@@ -503,7 +526,17 @@ export default function SettingsPage() {
   )
 }
 
+const PLAN_RANK: Record<string, number> = { BASIC: 1, PROFESSIONAL: 2, ENTERPRISE: 3 }
+
 const PLAN_OPTIONS = [
+  {
+    key: 'BASIC',
+    name: 'Básico',
+    price: 'R$ 149/mês',
+    description: '1 fisioterapeuta, até 80 pacientes, agenda, prontuário e PDF.',
+    icon: Shield,
+    highlight: false,
+  },
   {
     key: 'PROFESSIONAL',
     name: 'Profissional',
@@ -523,10 +556,15 @@ const PLAN_OPTIONS = [
 ]
 
 function PlanSection() {
+  const queryClient = useQueryClient()
+
   const { data: clinicInfo, isLoading } = useQuery<{
     plan: string
     subscriptionStatus: string | null
+    stripeSubscriptionId: string | null
     trialEndsAt: string | null
+    pendingPlan: string | null
+    pendingPlanAt: string | null
   }>({
     queryKey: ['clinic-plan'],
     queryFn: async () => {
@@ -536,22 +574,77 @@ function PlanSection() {
     },
   })
 
-  const [checkingOut, setCheckingOut] = useState<string | null>(null)
+  const [acting, setActing] = useState<string | null>(null)
+  const [confirm, setConfirm] = useState<{ planKey: string; isUpgrade: boolean; planName: string; price: string } | null>(null)
 
-  async function startCheckout(plan: string) {
-    setCheckingOut(plan)
+  const hasActiveSub = clinicInfo?.subscriptionStatus === 'active' && !!clinicInfo?.stripeSubscriptionId
+
+  function requestPlanChange(planKey: string) {
+    const plan = PLAN_OPTIONS.find(p => p.key === planKey)
+    if (!plan) return
+    const isUpgrade = (PLAN_RANK[planKey] ?? 0) > (PLAN_RANK[clinicInfo?.plan ?? 'BASIC'] ?? 0)
+    setConfirm({ planKey, isUpgrade, planName: plan.name, price: plan.price })
+  }
+
+  // Para assinaturas ativas: upgrade/downgrade via change-plan
+  async function changePlan(planKey: string) {
+    setActing(planKey)
+    try {
+      const res = await fetch('/api/stripe/change-plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan: planKey }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        if (data.error === 'no_active_subscription') {
+          return startCheckout(planKey)
+        }
+        throw new Error(data.error ?? 'Erro ao alterar plano')
+      }
+      if (data.type === 'upgrade') {
+        toast.success('Upgrade realizado! As funcionalidades já estão disponíveis.')
+      } else {
+        const d = new Date(data.effectiveDate)
+        toast.success(`Downgrade agendado para ${d.toLocaleDateString('pt-BR')}. Você mantém o plano atual até lá.`)
+      }
+      queryClient.invalidateQueries({ queryKey: ['clinic-plan'] })
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao alterar plano')
+    } finally {
+      setActing(null)
+    }
+  }
+
+  // Para sem assinatura ativa: ir para checkout
+  async function startCheckout(planKey: string) {
+    setActing(planKey)
     try {
       const res = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan }),
+        body: JSON.stringify({ plan: planKey }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Erro ao iniciar checkout')
       window.location.href = data.url
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Erro ao iniciar checkout')
-      setCheckingOut(null)
+      setActing(null)
+    }
+  }
+
+  async function cancelPendingDowngrade() {
+    setActing('cancel')
+    try {
+      const res = await fetch('/api/stripe/change-plan', { method: 'DELETE' })
+      if (!res.ok) throw new Error('Erro ao cancelar downgrade')
+      toast.success('Downgrade cancelado. Seu plano permanece inalterado.')
+      queryClient.invalidateQueries({ queryKey: ['clinic-plan'] })
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao cancelar downgrade')
+    } finally {
+      setActing(null)
     }
   }
 
@@ -561,6 +654,8 @@ function PlanSection() {
   const trialDaysLeft = trialEndsAt
     ? Math.max(0, Math.ceil((trialEndsAt.getTime() - Date.now()) / 86400000))
     : null
+  const pendingPlan = clinicInfo?.pendingPlan ?? null
+  const pendingPlanAt = clinicInfo?.pendingPlanAt ? new Date(clinicInfo.pendingPlanAt) : null
 
   const statusLabel: Record<string, string> = {
     trialing: 'Período de teste',
@@ -570,9 +665,11 @@ function PlanSection() {
     incomplete: 'Incompleto',
   }
 
+  const planName: Record<string, string> = { BASIC: 'Básico', PROFESSIONAL: 'Profissional', ENTERPRISE: 'Enterprise' }
+
   return (
     <div className="space-y-4">
-      {/* Current plan status */}
+      {/* Plano atual */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -588,7 +685,7 @@ function PlanSection() {
           ) : (
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-semibold text-base">{currentPlan === 'BASIC' ? 'Básico' : currentPlan === 'PROFESSIONAL' ? 'Profissional' : 'Enterprise'}</p>
+                <p className="font-semibold text-base">{planName[currentPlan] ?? currentPlan}</p>
                 <p className="text-sm text-muted-foreground">{statusLabel[status] ?? status}</p>
                 {status === 'trialing' && trialDaysLeft !== null && (
                   <p className="text-xs text-amber-600 dark:text-amber-400 mt-1 font-medium">
@@ -610,38 +707,97 @@ function PlanSection() {
         </CardContent>
       </Card>
 
-      {/* Upgrade options */}
+      {/* Banner de downgrade pendente */}
+      {pendingPlan && pendingPlanAt && (
+        <Card className="border-amber-400/40 bg-amber-50/60 dark:bg-amber-950/20">
+          <CardContent className="flex items-start justify-between gap-4 pt-4 pb-4">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center shrink-0">
+                <TrendingDown className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div>
+                <p className="font-semibold text-sm text-amber-800 dark:text-amber-300">
+                  Downgrade agendado para {planName[pendingPlan]}
+                </p>
+                <p className="text-xs text-amber-700/80 dark:text-amber-400/80 mt-0.5">
+                  Seu plano atual ({planName[currentPlan]}) permanece ativo até {pendingPlanAt.toLocaleDateString('pt-BR')}. Após essa data, as funcionalidades serão ajustadas.
+                </p>
+              </div>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="shrink-0 border-amber-400/50 text-amber-700 hover:bg-amber-100 dark:text-amber-400"
+              disabled={acting === 'cancel'}
+              onClick={cancelPendingDowngrade}
+            >
+              {acting === 'cancel' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Cancelar'}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Opções de plano */}
       <div className="space-y-3">
-        <p className="text-sm font-medium text-muted-foreground px-1">Fazer upgrade</p>
+        <p className="text-sm font-medium text-muted-foreground px-1">Alterar plano</p>
         {PLAN_OPTIONS.map((plan) => {
           const Icon = plan.icon
-          const isCurrent = currentPlan === plan.key && status === 'active'
+          // "atual" = plano ativo agora, mesmo que haja downgrade agendado
+          const isCurrent = currentPlan === plan.key && (status === 'active' || status === 'trialing')
+          const isPending = pendingPlan === plan.key
+          // upgrade/downgrade só faz sentido quando há assinatura ativa
+          const isUpgrade = hasActiveSub && (PLAN_RANK[plan.key] ?? 0) > (PLAN_RANK[currentPlan] ?? 0)
+          const isDowngrade = hasActiveSub && (PLAN_RANK[plan.key] ?? 0) < (PLAN_RANK[currentPlan] ?? 0)
+
           return (
-            <Card key={plan.key} className={cn(plan.highlight && 'border-primary/40 shadow-sm')}>
+            <Card key={plan.key} className={cn(
+              plan.highlight && !isCurrent && !isPending && 'border-primary/40 shadow-sm',
+              isCurrent && 'border-green-500/40 bg-green-50/50 dark:bg-green-950/20',
+              isPending && 'border-amber-400/40 opacity-60',
+            )}>
               <CardContent className="flex items-center justify-between gap-4 pt-4 pb-4">
                 <div className="flex items-start gap-3">
                   <div className={cn(
                     'w-9 h-9 rounded-lg flex items-center justify-center shrink-0',
-                    plan.highlight ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground',
+                    isCurrent ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400'
+                      : isPending ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400'
+                      : plan.highlight ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted text-muted-foreground',
                   )}>
                     <Icon className="h-4 w-4" />
                   </div>
                   <div>
-                    <p className="font-semibold text-sm">{plan.name} — {plan.price}</p>
+                    <p className="font-semibold text-sm">
+                      {plan.name} — {plan.price}
+                      {isPending && <span className="ml-2 text-xs font-normal text-amber-600 dark:text-amber-400">(agendado)</span>}
+                    </p>
                     <p className="text-xs text-muted-foreground mt-0.5">{plan.description}</p>
                   </div>
                 </div>
                 <Button
                   size="sm"
-                  variant={plan.highlight ? 'default' : 'outline'}
-                  className="shrink-0 transition-all hover:shadow-md"
-                  disabled={isCurrent || checkingOut !== null}
-                  onClick={() => startCheckout(plan.key)}
+                  variant={isCurrent || isPending ? 'ghost' : plan.highlight && !isDowngrade ? 'default' : 'outline'}
+                  className={cn(
+                    'shrink-0 transition-all',
+                    !isCurrent && !isPending && 'hover:shadow-md',
+                    isDowngrade && 'text-muted-foreground hover:text-destructive hover:border-destructive/50',
+                  )}
+                  disabled={isCurrent || isPending || acting !== null}
+                  onClick={() => {
+                    if (isCurrent || isPending) return
+                    hasActiveSub ? requestPlanChange(plan.key) : startCheckout(plan.key)
+                  }}
                 >
-                  {checkingOut === plan.key ? (
+                  {acting === plan.key ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   ) : isCurrent ? (
-                    <><Check className="h-3.5 w-3.5 mr-1.5" /> Ativo</>
+                    <><Check className="h-3.5 w-3.5 mr-1.5" /> Plano atual</>
+                  ) : isPending ? (
+                    'Agendado'
+                  ) : isUpgrade ? (
+                    <><TrendingUp className="h-3.5 w-3.5 mr-1.5" /> Upgrade</>
+                  ) : isDowngrade ? (
+                    <><TrendingDown className="h-3.5 w-3.5 mr-1.5" /> Downgrade</>
                   ) : (
                     'Assinar'
                   )}
@@ -655,6 +811,55 @@ function PlanSection() {
       <p className="text-xs text-muted-foreground px-1">
         Use o cartão de teste <span className="font-mono">4242 4242 4242 4242</span>, qualquer validade futura e qualquer CVC.
       </p>
+
+      <AlertDialog open={!!confirm} onOpenChange={(open) => { if (!open) setConfirm(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirm?.isUpgrade ? 'Confirmar upgrade' : 'Confirmar downgrade'}
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                {confirm?.isUpgrade ? (
+                  <>
+                    <p>
+                      Você está fazendo upgrade para o plano <strong>{confirm.planName} ({confirm.price})</strong>.
+                    </p>
+                    <p>
+                      A diferença proporcional ao período restante será cobrada <strong>agora no cartão cadastrado</strong>. A renovação mensal passará a ser no novo valor.
+                    </p>
+                    <p className="text-destructive/80 text-xs">
+                      Certifique-se de que seu cartão está atualizado antes de continuar.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p>
+                      Você está fazendo downgrade para o plano <strong>{confirm?.planName} ({confirm?.price})</strong>.
+                    </p>
+                    <p>
+                      <strong>Nenhuma cobrança agora.</strong> Você mantém o plano atual até o fim do período pago e o downgrade entra em vigor na próxima renovação.
+                    </p>
+                  </>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (confirm) {
+                  changePlan(confirm.planKey)
+                  setConfirm(null)
+                }
+              }}
+            >
+              {confirm?.isUpgrade ? 'Confirmar e pagar' : 'Confirmar downgrade'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

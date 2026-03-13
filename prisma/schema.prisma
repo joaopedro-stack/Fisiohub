@@ -28,6 +28,9 @@ model Clinic {
   stripeSubscriptionId String?   @unique
   subscriptionStatus   String?   @default("trialing")
   trialEndsAt          DateTime?
+  currentPeriodEnd     DateTime?
+  pendingPlan          Plan?
+  pendingPlanAt        DateTime?
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
 }

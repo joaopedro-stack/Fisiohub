@@ -7,6 +7,7 @@ import { CashFlow } from '@/components/features/finance/cash-flow'
 import { DRE } from '@/components/features/finance/dre'
 import { InvoicesList } from '@/components/features/finance/invoices-list'
 import { ExpensesList } from '@/components/features/finance/expenses-list'
+import { OverdueList } from '@/components/features/finance/overdue-list'
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns'
 
 const PERIOD_OPTIONS = [
@@ -43,6 +44,7 @@ export default function FinanceiroPage() {
           <TabsTrigger value="dre">DRE</TabsTrigger>
           <TabsTrigger value="invoices">Cobranças</TabsTrigger>
           <TabsTrigger value="expenses">Despesas</TabsTrigger>
+          <TabsTrigger value="overdue">Inadimplência</TabsTrigger>
         </TabsList>
 
         {/* Cash Flow */}
@@ -89,6 +91,11 @@ export default function FinanceiroPage() {
         {/* Expenses */}
         <TabsContent value="expenses" className="mt-6">
           <ExpensesList />
+        </TabsContent>
+
+        {/* Overdue */}
+        <TabsContent value="overdue" className="mt-6">
+          <OverdueList />
         </TabsContent>
       </Tabs>
     </div>

@@ -11,6 +11,7 @@ const createPatientSchema = z.object({
   cpf: z.string().optional(),
   birthDate: z.string().optional(),
   gender: z.enum(['MALE', 'FEMALE', 'OTHER']).optional(),
+  cep: z.string().optional(),
   address: z.string().optional(),
   healthInsurance: z.string().optional(),
   emergencyContact: z.string().optional(),

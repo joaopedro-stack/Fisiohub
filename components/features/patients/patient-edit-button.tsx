@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { PatientForm } from './patient-form'
 import type { Patient } from '@/types'
 
@@ -19,20 +19,22 @@ export function PatientEditButton({ patient }: { patient: Patient }) {
         Editar paciente
       </Button>
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Editar Paciente</DialogTitle>
-          </DialogHeader>
-          <PatientForm
-            patient={patient}
-            onSuccess={() => {
-              setOpen(false)
-              router.refresh()
-            }}
-          />
-        </DialogContent>
-      </Dialog>
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+          <SheetHeader className="px-6 pt-6">
+            <SheetTitle>Editar Paciente</SheetTitle>
+          </SheetHeader>
+          <div className="px-6 pb-6 mt-4">
+            <PatientForm
+              patient={patient}
+              onSuccess={() => {
+                setOpen(false)
+                router.refresh()
+              }}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
     </>
   )
 }
