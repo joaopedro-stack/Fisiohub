@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
       pendingPlanAt: { lte: new Date() },
       stripeSubscriptionId: { not: null },
       subscriptionStatus: 'active',
-    },
+    } as never,
   })
 
   const results: { slug: string; plan?: string | null; status: string; error?: string }[] = []
