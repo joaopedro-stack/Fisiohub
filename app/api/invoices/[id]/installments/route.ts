@@ -10,6 +10,9 @@ const createSchema = z.object({
   startDate: z.string(),
 })
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function db(prisma: unknown) { return prisma as any }
+
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -26,13 +29,13 @@ export async function GET(
   const invoice = await prisma.invoice.findUnique({ where: { id } })
   if (!invoice) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const installments = await prisma.installment.findMany({
+  const installments = await db(prisma).installment.findMany({
     where: { invoiceId: id },
     orderBy: { number: 'asc' },
   })
 
   return NextResponse.json(
-    installments.map((inst) => ({ ...inst, amount: Number(inst.amount) }))
+    installments.map((inst: { amount: number }) => ({ ...inst, amount: Number(inst.amount) }))
   )
 }
 
@@ -65,25 +68,25 @@ export async function POST(
   const start = new Date(startDate)
 
   // Delete existing installments first
-  await prisma.installment.deleteMany({ where: { invoiceId: id } })
+  await db(prisma).installment.deleteMany({ where: { invoiceId: id } })
 
   const installments = await prisma.$transaction(
     Array.from({ length: count }, (_, i) => {
       const amount = i === count - 1 ? lastAmount : baseAmount
       const dueDate = addDays(start, i * 30)
-      return prisma.installment.create({
+      return db(prisma).installment.create({
         data: {
           invoiceId: id,
           number: i + 1,
           amount,
           dueDate,
-        } as never,
+        },
       })
     })
   )
 
   return NextResponse.json(
-    installments.map((inst) => ({ ...inst, amount: Number(inst.amount) })),
+    (installments as { amount: number }[]).map((inst) => ({ ...inst, amount: Number(inst.amount) })),
     { status: 201 }
   )
 }

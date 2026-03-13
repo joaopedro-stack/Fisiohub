@@ -10,6 +10,9 @@ const createSchema = z.object({
   price: z.number().min(0),
 })
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function db(prisma: unknown) { return prisma as any }
+
 export async function GET() {
   const session = await auth()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -18,12 +21,12 @@ export async function GET() {
   if (!slug || slug === 'app') return NextResponse.json({ error: 'Invalid tenant' }, { status: 400 })
 
   const prisma = getTenantPrisma(slug)
-  const entries = await prisma.priceTable.findMany({
+  const entries = await db(prisma).priceTable.findMany({
     orderBy: [{ type: 'asc' }, { name: 'asc' }],
   })
 
   return NextResponse.json(
-    entries.map((e) => ({ ...e, price: Number(e.price) }))
+    entries.map((e: { price: number }) => ({ ...e, price: Number(e.price) }))
   )
 }
 
@@ -42,12 +45,12 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 422 })
 
   const prisma = getTenantPrisma(slug)
-  const entry = await prisma.priceTable.create({
+  const entry = await db(prisma).priceTable.create({
     data: {
       name: parsed.data.name,
       type: parsed.data.type ?? null,
       price: parsed.data.price,
-    } as never,
+    },
   })
 
   await prisma.financialAuditLog.create({

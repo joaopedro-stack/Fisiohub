@@ -9,6 +9,9 @@ const patchSchema = z.object({
   method: z.enum(['CASH', 'PIX', 'CARD', 'INSURANCE', 'OTHER']).optional(),
 })
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function db(prisma: unknown) { return prisma as any }
+
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string; installmentId: string }> }
@@ -26,44 +29,42 @@ export async function PATCH(
 
   const prisma = getTenantPrisma(slug)
 
-  const installment = await prisma.installment.findUnique({ where: { id: installmentId } })
+  const installment = await db(prisma).installment.findUnique({ where: { id: installmentId } })
   if (!installment || installment.invoiceId !== id) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
 
-  const updated = await prisma.installment.update({
+  const updated = await db(prisma).installment.update({
     where: { id: installmentId },
     data: {
       paidAt: parsed.data.paid ? new Date() : null,
       method: parsed.data.paid ? (parsed.data.method ?? null) : null,
-    } as never,
+    },
   })
 
   const method = parsed.data.method ?? 'PIX'
 
   // Create or refund a Payment to keep cashflow/DRE in sync
   if (parsed.data.paid) {
-    // Paying an installment → create a Payment
     await prisma.payment.create({
       data: {
         invoiceId: id,
         amount: installment.amount,
         method,
         paidAt: new Date(),
-        notes: `Parcela ${(installment as unknown as { number: number }).number}`,
+        notes: `Parcela ${installment.number}`,
         updatedAt: new Date(),
       } as never,
     })
   } else if (installment.paidAt) {
-    // Unmarking a paid installment → create a refund Payment
     await prisma.payment.create({
       data: {
         invoiceId: id,
         amount: installment.amount,
-        method: (installment as unknown as { method: string | null }).method ?? 'PIX',
+        method: installment.method ?? 'PIX',
         paidAt: new Date(),
         isRefund: true,
-        notes: `Estorno parcela ${(installment as unknown as { number: number }).number}`,
+        notes: `Estorno parcela ${installment.number}`,
         updatedAt: new Date(),
       } as never,
     })
@@ -80,12 +81,10 @@ export async function PATCH(
     const currentStatus = invoice.status as string
 
     if (netPaid >= totalAmount && currentStatus !== 'PAID') {
-      // Mark invoice PAID
       await prisma.invoice.update({
         where: { id },
         data: { status: 'PAID', paidAt: new Date(), updatedAt: new Date() } as never,
       })
-      // Update linked appointments
       await prisma.appointment.updateMany({
         where: { invoiceId: id },
         data: { paymentStatus: 'PAID', updatedAt: new Date() } as never,
@@ -102,7 +101,6 @@ export async function PATCH(
         } as never,
       })
     } else if (netPaid < totalAmount && currentStatus === 'PAID') {
-      // Revert to OPEN if overpaid is now partial (e.g. installment unmarked)
       await prisma.invoice.update({
         where: { id },
         data: { status: 'OPEN', paidAt: null, updatedAt: new Date() } as never,
@@ -130,7 +128,7 @@ export async function PATCH(
       entityType: 'Installment',
       entityId: installmentId,
       action: 'STATUS_CHANGE',
-      oldValue: { paidAt: installment.paidAt, method: (installment as unknown as { method: string | null }).method },
+      oldValue: { paidAt: installment.paidAt, method: installment.method },
       newValue: { paidAt: updated.paidAt, method: updated.method },
       changedBy: session.user.id,
       changedAt: new Date(),

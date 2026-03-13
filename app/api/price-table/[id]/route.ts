@@ -11,6 +11,9 @@ const patchSchema = z.object({
   type: z.enum(['INITIAL_EVALUATION', 'FOLLOW_UP', 'DISCHARGE', 'RETURN']).nullable().optional(),
 })
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function db(prisma: unknown) { return prisma as any }
+
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -30,7 +33,7 @@ export async function PATCH(
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 422 })
 
   const prisma = getTenantPrisma(slug)
-  const existing = await prisma.priceTable.findUnique({ where: { id } })
+  const existing = await db(prisma).priceTable.findUnique({ where: { id } })
   if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   const update: Record<string, unknown> = {}
@@ -39,7 +42,7 @@ export async function PATCH(
   if (parsed.data.price !== undefined) update.price = parsed.data.price
   if ('type' in parsed.data) update.type = parsed.data.type ?? null
 
-  const updated = await prisma.priceTable.update({ where: { id }, data: update as never })
+  const updated = await db(prisma).priceTable.update({ where: { id }, data: update })
 
   await prisma.financialAuditLog.create({
     data: {
@@ -72,10 +75,10 @@ export async function DELETE(
   const { id } = await params
   const prisma = getTenantPrisma(slug)
 
-  const existing = await prisma.priceTable.findUnique({ where: { id } })
+  const existing = await db(prisma).priceTable.findUnique({ where: { id } })
   if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  await prisma.priceTable.delete({ where: { id } })
+  await db(prisma).priceTable.delete({ where: { id } })
 
   await prisma.financialAuditLog.create({
     data: {
