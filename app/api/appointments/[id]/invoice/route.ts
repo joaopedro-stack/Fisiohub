@@ -26,10 +26,15 @@ export async function GET(
     where: { id: invoiceId },
     include: {
       payments: { orderBy: { paidAt: 'asc' } },
-      installments: { orderBy: { number: 'asc' } },
-    },
-  })
+    } as never,
+  }) as (Awaited<ReturnType<typeof prisma.invoice.findUnique>> & {
+    payments: { id: string; amount: number; method: string; paidAt: Date; isRefund: boolean }[]
+  }) | null
   if (!invoice) return NextResponse.json({ error: 'Invoice not found' }, { status: 404 })
+
+  const installments = await (prisma.installment as unknown as {
+    findMany: (args: unknown) => Promise<{ id: string; number: number; amount: number; dueDate: Date; paidAt: Date | null; method: string | null }[]>
+  }).findMany({ where: { invoiceId }, orderBy: { number: 'asc' } })
 
   const paidSum = invoice.payments.filter((p) => !p.isRefund).reduce((s, p) => s + Number(p.amount), 0)
   const refundSum = invoice.payments.filter((p) => p.isRefund).reduce((s, p) => s + Number(p.amount), 0)
@@ -37,8 +42,8 @@ export async function GET(
 
   return NextResponse.json({
     ...invoice,
-    totalAmount: Number(invoice.totalAmount),
+    totalAmount: Number((invoice as unknown as { totalAmount: number }).totalAmount),
     netPaid,
-    installments: invoice.installments.map((inst) => ({ ...inst, amount: Number(inst.amount) })),
+    installments: installments.map((inst) => ({ ...inst, amount: Number(inst.amount) })),
   })
 }
