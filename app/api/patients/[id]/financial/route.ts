@@ -3,6 +3,9 @@ import { auth } from '@/lib/auth'
 import { getTenantPrisma } from '@/lib/tenant-prisma'
 import { getTenantSlug } from '@/lib/get-tenant-slug'
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function db(prisma: unknown) { return prisma as any }
+
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -19,7 +22,7 @@ export async function GET(
   const patient = await prisma.patient.findUnique({ where: { id }, select: { id: true, name: true } })
   if (!patient) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const invoices = await prisma.invoice.findMany({
+  const invoices = await db(prisma).invoice.findMany({
     where: { patientId: id },
     include: {
       payments: { orderBy: { paidAt: 'asc' } },
@@ -34,16 +37,17 @@ export async function GET(
   let totalPaid = 0
   let overdueAmount = 0
 
-  const invoiceList = invoices.map((inv) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const invoiceList = invoices.map((inv: any) => {
     const amount = Number(inv.totalAmount)
     totalBilled += amount
 
     const paidSum = inv.payments
-      .filter((p) => !p.isRefund)
-      .reduce((s, p) => s + Number(p.amount), 0)
+      .filter((p: any) => !p.isRefund)
+      .reduce((s: number, p: any) => s + Number(p.amount), 0)
     const refundSum = inv.payments
-      .filter((p) => p.isRefund)
-      .reduce((s, p) => s + Number(p.amount), 0)
+      .filter((p: any) => p.isRefund)
+      .reduce((s: number, p: any) => s + Number(p.amount), 0)
     const netPaid = paidSum - refundSum
     totalPaid += netPaid
 
@@ -67,7 +71,7 @@ export async function GET(
       paidAt: inv.paidAt,
       notes: inv.notes,
       appointmentsCount: inv.appointments.length,
-      payments: inv.payments.map((p) => ({
+      payments: inv.payments.map((p: any) => ({
         id: p.id,
         amount: Number(p.amount),
         method: p.method,
@@ -75,7 +79,7 @@ export async function GET(
         isRefund: p.isRefund,
         notes: p.notes,
       })),
-      installments: inv.installments.map((inst) => ({
+      installments: inv.installments.map((inst: any) => ({
         id: inst.id,
         number: inst.number,
         amount: Number(inst.amount),
