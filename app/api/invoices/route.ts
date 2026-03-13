@@ -42,6 +42,14 @@ export async function GET(req: NextRequest) {
     if (to) (where.issuedAt as Record<string, unknown>).lte = new Date(to)
   }
 
+  const now = new Date()
+
+  // Auto-update OVERDUE status in DB (consistent with /api/finance/overdue)
+  await prisma.invoice.updateMany({
+    where: { status: 'OPEN', dueDate: { lt: now } },
+    data: { status: 'OVERDUE' } as never,
+  })
+
   const [invoices, total] = await Promise.all([
     prisma.invoice.findMany({
       where: where as never,
@@ -57,7 +65,7 @@ export async function GET(req: NextRequest) {
   ])
 
   // Compute effective status (OVERDUE if past due and still OPEN)
-  const now = new Date()
+
   const enriched = invoices.map((inv) => {
     const paidSum = inv.payments
       .filter((p) => !p.isRefund)

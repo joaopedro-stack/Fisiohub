@@ -56,6 +56,10 @@ export async function GET(
   let effectiveStatus = invoice.status as string
   if (effectiveStatus === 'OPEN' && invoice.dueDate && invoice.dueDate < now) {
     effectiveStatus = 'OVERDUE'
+    await prisma.invoice.update({
+      where: { id },
+      data: { status: 'OVERDUE' } as never,
+    })
   }
 
   return NextResponse.json({

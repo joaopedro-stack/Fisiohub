@@ -1,7 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma as publicPrisma } from '@/lib/prisma'
 import { getTenantPrisma } from '@/lib/tenant-prisma'
-import { startOfMonth, endOfMonth, setDate, getDate } from 'date-fns'
+import {
+  startOfMonth, endOfMonth,
+  startOfWeek, endOfWeek,
+  startOfQuarter, endOfQuarter,
+  startOfYear, endOfYear,
+  setDate, setDay, getDate, getDay, getMonth, getYear,
+} from 'date-fns'
+
+function getRecurrenceWindow(now: Date, rule: string): { start: Date; end: Date } {
+  switch (rule) {
+    case 'weekly':
+      return { start: startOfWeek(now, { weekStartsOn: 1 }), end: endOfWeek(now, { weekStartsOn: 1 }) }
+    case 'quarterly':
+      return { start: startOfQuarter(now), end: endOfQuarter(now) }
+    case 'yearly':
+      return { start: startOfYear(now), end: endOfYear(now) }
+    default: // monthly
+      return { start: startOfMonth(now), end: endOfMonth(now) }
+  }
+}
+
+function getDueDate(parentDueDate: Date, now: Date, rule: string): Date {
+  try {
+    switch (rule) {
+      case 'weekly':
+        return setDay(now, getDay(parentDueDate), { weekStartsOn: 1 })
+      case 'quarterly': {
+        const parentMonthInQuarter = getMonth(parentDueDate) % 3
+        const currentQuarterStartMonth = Math.floor(getMonth(now) / 3) * 3
+        return new Date(getYear(now), currentQuarterStartMonth + parentMonthInQuarter, getDate(parentDueDate))
+      }
+      case 'yearly':
+        return new Date(getYear(now), getMonth(parentDueDate), getDate(parentDueDate))
+      default: // monthly
+        return setDate(now, getDate(parentDueDate))
+    }
+  } catch {
+    return startOfMonth(now)
+  }
+}
 
 export async function POST(req: NextRequest) {
   const authHeader = req.headers.get('authorization')
@@ -11,10 +50,6 @@ export async function POST(req: NextRequest) {
   }
 
   const now = new Date()
-  // Target: current month
-  const targetMonthStart = startOfMonth(now)
-  const targetMonthEnd = endOfMonth(now)
-
   let generated = 0
   let errors = 0
 
@@ -28,34 +63,29 @@ export async function POST(req: NextRequest) {
       try {
         const prisma = getTenantPrisma(clinic.slug)
 
-        // Find all root recurring expenses
+        // Find all root recurring expenses (any recurrence rule)
         const recurringExpenses = await prisma.expense.findMany({
           where: {
             isRecurring: true,
-            recurrenceRule: 'monthly',
             parentExpenseId: null,
           } as never,
         })
 
         for (const parent of recurringExpenses) {
-          // Check if an instance already exists for this month
+          const rule = (parent as unknown as { recurrenceRule: string | null }).recurrenceRule ?? 'monthly'
+          const { start, end } = getRecurrenceWindow(now, rule)
+
+          // Check if an instance already exists for this period
           const existing = await prisma.expense.findFirst({
             where: {
               parentExpenseId: parent.id,
-              createdAt: { gte: targetMonthStart, lte: targetMonthEnd },
+              createdAt: { gte: start, lte: end },
             } as never,
           })
 
           if (existing) continue
 
-          // Create instance for current month, due on the same day of month as parent
-          const dayOfMonth = getDate(parent.dueDate)
-          let dueDate: Date
-          try {
-            dueDate = setDate(now, dayOfMonth)
-          } catch {
-            dueDate = targetMonthStart
-          }
+          const dueDate = getDueDate(parent.dueDate, now, rule)
 
           await prisma.expense.create({
             data: {
@@ -79,5 +109,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Failed to query clinics', detail: String(err) }, { status: 500 })
   }
 
-  return NextResponse.json({ generated, errors, month: targetMonthStart.toISOString() })
+  return NextResponse.json({ generated, errors, timestamp: now.toISOString() })
 }

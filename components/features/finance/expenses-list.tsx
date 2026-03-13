@@ -41,6 +41,13 @@ interface Expense {
   recurrenceRule?: string | null
 }
 
+const RECURRENCE_LABELS: Record<string, string> = {
+  weekly: 'Semanal',
+  monthly: 'Mensal',
+  quarterly: 'Trimestral',
+  yearly: 'Anual',
+}
+
 const INITIAL_FORM = {
   description: '',
   category: 'OTHER',
@@ -179,7 +186,9 @@ export function ExpensesList() {
                       <td className="px-4 py-3">
                         <span className="font-medium">{exp.description}</span>
                         {exp.isRecurring && (
-                          <span className="ml-2 text-xs text-muted-foreground">(recorrente)</span>
+                          <span className="ml-2 text-xs text-muted-foreground">
+                            ({RECURRENCE_LABELS[exp.recurrenceRule ?? 'monthly'] ?? 'recorrente'})
+                          </span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-muted-foreground">
@@ -287,13 +296,30 @@ export function ExpensesList() {
                 onChange={(e) => setForm((f) => ({ ...f, dueDate: e.target.value }))}
               />
             </div>
-            <div className="flex items-center gap-3">
-              <Switch
-                id="recurring"
-                checked={form.isRecurring}
-                onCheckedChange={(v) => setForm((f) => ({ ...f, isRecurring: v }))}
-              />
-              <Label htmlFor="recurring">Despesa recorrente (mensal)</Label>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <Switch
+                  id="recurring"
+                  checked={form.isRecurring}
+                  onCheckedChange={(v) => setForm((f) => ({ ...f, isRecurring: v }))}
+                />
+                <Label htmlFor="recurring">Despesa recorrente</Label>
+              </div>
+              {form.isRecurring && (
+                <div className="space-y-2">
+                  <Label>Frequência</Label>
+                  <Select value={form.recurrenceRule} onValueChange={(v) => setForm((f) => ({ ...f, recurrenceRule: v }))}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(RECURRENCE_LABELS).map(([k, v]) => (
+                        <SelectItem key={k} value={k}>{v}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
           </div>
           <DialogFooter>

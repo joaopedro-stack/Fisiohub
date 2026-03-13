@@ -136,6 +136,40 @@ export async function POST(req: NextRequest) {
     },
   })
 
+  // Finance: create Invoice/Payment based on paymentStatus
+  if (parsed.data.paymentStatus === 'PAID' && parsed.data.paymentValue && parsed.data.paymentMethod) {
+    try {
+      const { createAppointmentPayment } = await import('@/lib/finance/create-appointment-payment')
+      await createAppointmentPayment(
+        prisma,
+        appointment.id,
+        { amount: parsed.data.paymentValue, method: parsed.data.paymentMethod },
+        session.user.id,
+      )
+    } catch (finErr) {
+      console.error('[Finance] Failed to create payment for appointment:', finErr)
+    }
+  } else if (parsed.data.paymentStatus === 'INSURANCE' && parsed.data.paymentValue) {
+    try {
+      const { createInsuranceInvoice } = await import('@/lib/finance/create-appointment-payment')
+      await createInsuranceInvoice(
+        prisma,
+        appointment.id,
+        { amount: parsed.data.paymentValue, patientId: parsed.data.patientId },
+        session.user.id,
+      )
+    } catch (finErr) {
+      console.error('[Finance] Failed to create insurance invoice for appointment:', finErr)
+    }
+  } else if (parsed.data.paymentStatus === 'WAIVED') {
+    try {
+      const { createWaivedInvoice } = await import('@/lib/finance/create-appointment-payment')
+      await createWaivedInvoice(prisma, appointment.id, parsed.data.patientId, session.user.id)
+    } catch (finErr) {
+      console.error('[Finance] Failed to create waived invoice for appointment:', finErr)
+    }
+  }
+
   // Send email with confirm/cancel buttons (silent — does not block response)
   try {
     if (appointment.patient.email) {

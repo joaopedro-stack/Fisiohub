@@ -89,6 +89,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
   }
 
+  // Fetch current state before update (needed for finance logic)
+  const currentAppointment = await prisma.appointment.findUnique({ where: { id } })
+
   const appointment = await prisma.appointment.update({
     where: { id },
     data: {
@@ -100,8 +103,71 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     include: { patient: true, physiotherapist: { select: { id: true, name: true, email: true, role: true } } },
   })
 
-  // Send notifications on status changes (silent — does not block response)
+  // Finance: react to paymentStatus or status changes
+  const prevPaymentStatus = (currentAppointment as unknown as { paymentStatus: string } | null)?.paymentStatus
+  const newPaymentStatus: string | undefined = body.paymentStatus
   const newStatus: string | undefined = body.status
+  const appt = appointment as unknown as { patientId: string; paymentValue: number | null; paymentMethod: string | null; invoiceId: string | null }
+
+  if (newPaymentStatus && newPaymentStatus !== prevPaymentStatus) {
+    if (newPaymentStatus === 'PAID') {
+      const amount = Number(body.paymentValue ?? appt.paymentValue)
+      const method = body.paymentMethod ?? appt.paymentMethod
+      if (amount > 0 && method) {
+        try {
+          const { createAppointmentPayment } = await import('@/lib/finance/create-appointment-payment')
+          await createAppointmentPayment(prisma, id, { amount, method }, session.user.id)
+        } catch (finErr) {
+          console.error('[Finance] Failed to create payment on PATCH:', finErr)
+        }
+      }
+    } else if (newPaymentStatus === 'INSURANCE') {
+      const amount = Number(body.paymentValue ?? appt.paymentValue)
+      if (amount > 0) {
+        try {
+          const { createInsuranceInvoice } = await import('@/lib/finance/create-appointment-payment')
+          await createInsuranceInvoice(prisma, id, { amount, patientId: appt.patientId }, session.user.id)
+        } catch (finErr) {
+          console.error('[Finance] Failed to create insurance invoice on PATCH:', finErr)
+        }
+      }
+    } else if (newPaymentStatus === 'WAIVED') {
+      try {
+        const { createWaivedInvoice } = await import('@/lib/finance/create-appointment-payment')
+        await createWaivedInvoice(prisma, id, appt.patientId, session.user.id)
+      } catch (finErr) {
+        console.error('[Finance] Failed to create waived invoice on PATCH:', finErr)
+      }
+    }
+  }
+
+  // Auto-cancel open invoice when appointment is cancelled
+  if (newStatus === 'CANCELLED' && appt.invoiceId) {
+    try {
+      const inv = await prisma.invoice.findUnique({ where: { id: appt.invoiceId } })
+      if (inv && (inv.status as string) === 'OPEN') {
+        await prisma.invoice.update({
+          where: { id: appt.invoiceId },
+          data: { status: 'CANCELED', updatedAt: new Date() } as never,
+        })
+        await prisma.financialAuditLog.create({
+          data: {
+            entityType: 'Invoice',
+            entityId: appt.invoiceId,
+            action: 'STATUS_CHANGE',
+            oldValue: { status: 'OPEN' },
+            newValue: { status: 'CANCELED', reason: 'appointment_cancelled' },
+            changedBy: session.user.id,
+            changedAt: new Date(),
+          } as never,
+        })
+      }
+    } catch (finErr) {
+      console.error('[Finance] Failed to cancel invoice on appointment cancel:', finErr)
+    }
+  }
+
+  // Send notifications on status changes (silent — does not block response)
   if (newStatus === 'CONFIRMED' || newStatus === 'CANCELLED') {
     const { prisma: publicPrisma } = await import('@/lib/prisma')
     const clinic = await publicPrisma.clinic.findUnique({ where: { slug } })

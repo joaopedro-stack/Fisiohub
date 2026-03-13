@@ -9,9 +9,14 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { toast } from 'sonner'
-import { CreditCard, X, ChevronLeft, ChevronRight } from 'lucide-react'
-import { formatDate } from '@/lib/utils'
+import {
+  CreditCard, X, ChevronLeft, ChevronRight,
+  ChevronDown, ChevronUp, RotateCcw, Layers,
+  CheckCircle2, Circle,
+} from 'lucide-react'
+import { formatDate, cn } from '@/lib/utils'
 
 function formatBRL(value: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
@@ -39,6 +44,15 @@ const METHOD_LABELS: Record<string, string> = {
   OTHER: 'Outro',
 }
 
+interface Payment {
+  id: string
+  amount: number
+  method: string
+  paidAt: string
+  isRefund: boolean
+  notes: string | null
+}
+
 interface Invoice {
   id: string
   patientId: string
@@ -50,22 +64,52 @@ interface Invoice {
   netPaid: number
   notes?: string | null
   patient: { id: string; name: string }
+  payments: Payment[]
+}
+
+interface Installment {
+  id: string
+  number: number
+  amount: number
+  dueDate: string
+  paidAt: string | null
+  method: string | null
 }
 
 export function InvoicesList() {
   const queryClient = useQueryClient()
   const [page, setPage] = useState(1)
   const [statusFilter, setStatusFilter] = useState<string>('all')
+
+  // Main dialogs
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null)
   const [paymentForm, setPaymentForm] = useState({ amount: '', method: 'PIX', notes: '' })
 
+  // Expanded payments per invoice
+  const [expandedInvoice, setExpandedInvoice] = useState<string | null>(null)
+
+  // Installment management
+  const [installmentsSheetInvoice, setInstallmentsSheetInvoice] = useState<Invoice | null>(null)
+  const [installmentDialogInvoice, setInstallmentDialogInvoice] = useState<Invoice | null>(null)
+  const [installCount, setInstallCount] = useState('2')
+  const [installStartDate, setInstallStartDate] = useState(() => new Date().toISOString().split('T')[0])
+
   const statusParam = statusFilter === 'all' ? '' : statusFilter
 
   const { data, isLoading } = useQuery<{ data: Invoice[]; total: number; limit: number }>({
     queryKey: ['invoices', page, statusFilter],
-    queryFn: () => fetch(`/api/invoices?page=${page}&limit=15${statusParam ? `&status=${statusParam}` : ''}`).then((r) => r.json()),
+    queryFn: () =>
+      fetch(`/api/invoices?page=${page}&limit=15${statusParam ? `&status=${statusParam}` : ''}`).then((r) => r.json()),
+  })
+
+  // Installments — fetched on demand when sheet opens
+  const { data: installmentsData, isLoading: installmentsLoading } = useQuery<Installment[]>({
+    queryKey: ['installments', installmentsSheetInvoice?.id],
+    queryFn: () =>
+      fetch(`/api/invoices/${installmentsSheetInvoice!.id}/installments`).then((r) => r.json()),
+    enabled: !!installmentsSheetInvoice,
   })
 
   const addPayment = useMutation({
@@ -84,6 +128,16 @@ export function InvoicesList() {
     onError: () => toast.error('Erro ao registrar pagamento'),
   })
 
+  const refundPayment = useMutation({
+    mutationFn: ({ invoiceId, paymentId }: { invoiceId: string; paymentId: string }) =>
+      fetch(`/api/invoices/${invoiceId}/payments/${paymentId}`, { method: 'DELETE' }).then((r) => r.json()),
+    onSuccess: () => {
+      toast.success('Estorno registrado')
+      queryClient.invalidateQueries({ queryKey: ['invoices'] })
+    },
+    onError: () => toast.error('Erro ao registrar estorno'),
+  })
+
   const cancelInvoice = useMutation({
     mutationFn: (id: string) =>
       fetch(`/api/invoices/${id}`, {
@@ -97,6 +151,44 @@ export function InvoicesList() {
       setCancelDialogOpen(false)
     },
     onError: () => toast.error('Erro ao cancelar fatura'),
+  })
+
+  const createInstallments = useMutation({
+    mutationFn: ({ invoiceId, count, startDate }: { invoiceId: string; count: number; startDate: string }) =>
+      fetch(`/api/invoices/${invoiceId}/installments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ count, startDate }),
+      }).then(async (r) => {
+        if (!r.ok) {
+          const err = await r.json()
+          throw new Error(err.error ?? 'Erro ao criar parcelamento')
+        }
+        return r.json()
+      }),
+    onSuccess: (_, vars) => {
+      toast.success('Parcelamento criado!')
+      queryClient.invalidateQueries({ queryKey: ['invoices'] })
+      queryClient.invalidateQueries({ queryKey: ['installments', vars.invoiceId] })
+      setInstallmentDialogInvoice(null)
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
+  const toggleInstallmentPaid = useMutation({
+    mutationFn: ({
+      invoiceId, installmentId, paid, method,
+    }: { invoiceId: string; installmentId: string; paid: boolean; method?: string }) =>
+      fetch(`/api/invoices/${invoiceId}/installments/${installmentId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paid, method }),
+      }).then((r) => r.json()),
+    onSuccess: () => {
+      toast.success('Parcela atualizada!')
+      queryClient.invalidateQueries({ queryKey: ['installments', installmentsSheetInvoice?.id] })
+    },
+    onError: () => toast.error('Erro ao atualizar parcela'),
   })
 
   const invoices = data?.data ?? []
@@ -116,6 +208,7 @@ export function InvoicesList() {
             <SelectItem value="all">Todos</SelectItem>
             <SelectItem value="OPEN">Em Aberto</SelectItem>
             <SelectItem value="PAID">Pagos</SelectItem>
+            <SelectItem value="OVERDUE">Vencidos</SelectItem>
             <SelectItem value="CANCELED">Cancelados</SelectItem>
           </SelectContent>
         </Select>
@@ -146,45 +239,120 @@ export function InvoicesList() {
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {invoices.map((inv) => (
-                    <tr key={inv.id} className="hover:bg-muted/30 transition-colors">
-                      <td className="px-4 py-3 font-medium">{inv.patient.name}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{formatDate(new Date(inv.issuedAt))}</td>
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {inv.dueDate ? formatDate(new Date(inv.dueDate)) : '—'}
-                      </td>
-                      <td className="px-4 py-3 text-right font-medium">{formatBRL(inv.totalAmount)}</td>
-                      <td className="px-4 py-3 text-right text-muted-foreground">{formatBRL(inv.netPaid)}</td>
-                      <td className="px-4 py-3 text-center">
-                        <Badge variant={STATUS_VARIANTS[inv.effectiveStatus] ?? 'secondary'}>
-                          {STATUS_LABELS[inv.effectiveStatus] ?? inv.effectiveStatus}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center justify-end gap-1">
-                          {inv.effectiveStatus !== 'PAID' && inv.effectiveStatus !== 'CANCELED' && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => { setSelectedInvoice(inv); setPaymentForm({ amount: String(inv.totalAmount - inv.netPaid), method: 'PIX', notes: '' }); setPaymentDialogOpen(true) }}
-                            >
-                              <CreditCard className="h-4 w-4" />
-                            </Button>
-                          )}
-                          {inv.effectiveStatus !== 'CANCELED' && inv.effectiveStatus !== 'PAID' && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="text-destructive hover:text-destructive"
-                              onClick={() => { setSelectedInvoice(inv); setCancelDialogOpen(true) }}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  {invoices.map((inv) => {
+                    const isExpanded = expandedInvoice === inv.id
+                    const visiblePayments = inv.payments.filter((p) => !p.isRefund)
+                    return (
+                      <tr key={inv.id}>
+                        <td colSpan={7} className="p-0">
+                          <table className="w-full text-sm">
+                            <tbody>
+                              <tr className="hover:bg-muted/30 transition-colors border-b">
+                                <td className="px-4 py-3 font-medium">{inv.patient.name}</td>
+                                <td className="px-4 py-3 text-muted-foreground">{formatDate(new Date(inv.issuedAt))}</td>
+                                <td className="px-4 py-3 text-muted-foreground">
+                                  {inv.dueDate ? formatDate(new Date(inv.dueDate)) : '—'}
+                                </td>
+                                <td className="px-4 py-3 text-right font-medium">{formatBRL(inv.totalAmount)}</td>
+                                <td className="px-4 py-3 text-right text-muted-foreground">{formatBRL(inv.netPaid)}</td>
+                                <td className="px-4 py-3 text-center">
+                                  <Badge variant={STATUS_VARIANTS[inv.effectiveStatus] ?? 'secondary'}>
+                                    {STATUS_LABELS[inv.effectiveStatus] ?? inv.effectiveStatus}
+                                  </Badge>
+                                </td>
+                                <td className="px-4 py-3">
+                                  <div className="flex items-center justify-end gap-1">
+                                    {visiblePayments.length > 0 && (
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        title="Ver pagamentos"
+                                        onClick={() => setExpandedInvoice(isExpanded ? null : inv.id)}
+                                      >
+                                        {isExpanded
+                                          ? <ChevronUp className="h-4 w-4" />
+                                          : <ChevronDown className="h-4 w-4" />}
+                                      </Button>
+                                    )}
+                                    {inv.effectiveStatus !== 'CANCELED' && (
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        title="Parcelamento"
+                                        onClick={() => setInstallmentsSheetInvoice(inv)}
+                                      >
+                                        <Layers className="h-4 w-4" />
+                                      </Button>
+                                    )}
+                                    {inv.effectiveStatus !== 'PAID' && inv.effectiveStatus !== 'CANCELED' && (
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        title="Registrar pagamento"
+                                        onClick={() => {
+                                          setSelectedInvoice(inv)
+                                          setPaymentForm({ amount: String(inv.totalAmount - inv.netPaid), method: 'PIX', notes: '' })
+                                          setPaymentDialogOpen(true)
+                                        }}
+                                      >
+                                        <CreditCard className="h-4 w-4" />
+                                      </Button>
+                                    )}
+                                    {inv.effectiveStatus !== 'CANCELED' && inv.effectiveStatus !== 'PAID' && (
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="text-destructive hover:text-destructive"
+                                        title="Cancelar fatura"
+                                        onClick={() => { setSelectedInvoice(inv); setCancelDialogOpen(true) }}
+                                      >
+                                        <X className="h-4 w-4" />
+                                      </Button>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                              {isExpanded && (
+                                <tr className="bg-muted/20">
+                                  <td colSpan={7} className="px-6 py-3">
+                                    <p className="text-xs font-medium text-muted-foreground mb-2">Pagamentos</p>
+                                    <div className="space-y-1.5">
+                                      {inv.payments.map((p) => (
+                                        <div key={p.id} className="flex items-center justify-between text-xs">
+                                          <span className="text-muted-foreground">
+                                            {formatDate(new Date(p.paidAt))} · {METHOD_LABELS[p.method] ?? p.method}
+                                            {p.isRefund && <span className="text-destructive ml-1">(estorno)</span>}
+                                            {p.notes && <span className="ml-1">· {p.notes}</span>}
+                                          </span>
+                                          <div className="flex items-center gap-2">
+                                            <span className={cn('font-medium', p.isRefund && 'text-destructive')}>
+                                              {p.isRefund ? '-' : ''}{formatBRL(p.amount)}
+                                            </span>
+                                            {!p.isRefund && (
+                                              <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                                                title="Estornar pagamento"
+                                                onClick={() => refundPayment.mutate({ invoiceId: inv.id, paymentId: p.id })}
+                                                disabled={refundPayment.isPending}
+                                              >
+                                                <RotateCcw className="h-3 w-3" />
+                                              </Button>
+                                            )}
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
@@ -286,6 +454,155 @@ export function InvoicesList() {
               onClick={() => selectedInvoice && cancelInvoice.mutate(selectedInvoice.id)}
             >
               {cancelInvoice.isPending ? 'Cancelando...' : 'Cancelar Fatura'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Installments sheet */}
+      <Sheet
+        open={!!installmentsSheetInvoice}
+        onOpenChange={(open) => { if (!open) setInstallmentsSheetInvoice(null) }}
+      >
+        <SheetContent className="w-full sm:max-w-md overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Parcelamento</SheetTitle>
+          </SheetHeader>
+          {installmentsSheetInvoice && (
+            <div className="mt-6 space-y-4">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">{installmentsSheetInvoice.patient.name}</span>
+                <span className="font-bold">{formatBRL(installmentsSheetInvoice.totalAmount)}</span>
+              </div>
+
+              {installmentsSheetInvoice.effectiveStatus !== 'CANCELED' &&
+                installmentsSheetInvoice.effectiveStatus !== 'PAID' && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => { setInstallmentDialogInvoice(installmentsSheetInvoice); setInstallCount('2') }}
+                >
+                  <Layers className="h-4 w-4 mr-2" />
+                  {installmentsData && installmentsData.length > 0 ? 'Reparcelar' : 'Criar parcelamento'}
+                </Button>
+              )}
+
+              {installmentsLoading ? (
+                <div className="space-y-2">
+                  {[...Array(3)].map((_, i) => <div key={i} className="h-14 rounded bg-muted animate-pulse" />)}
+                </div>
+              ) : installmentsData && installmentsData.length > 0 ? (
+                <div className="space-y-2">
+                  {installmentsData.map((inst) => {
+                    const isPaid = !!inst.paidAt
+                    return (
+                      <div
+                        key={inst.id}
+                        className={cn(
+                          'flex items-center justify-between p-3 rounded-lg border',
+                          isPaid
+                            ? 'bg-green-50/50 dark:bg-green-950/20 border-green-200/60 dark:border-green-800/40'
+                            : 'bg-muted/30',
+                        )}
+                      >
+                        <div className="flex items-center gap-3">
+                          <button
+                            className="shrink-0"
+                            onClick={() => toggleInstallmentPaid.mutate({
+                              invoiceId: installmentsSheetInvoice.id,
+                              installmentId: inst.id,
+                              paid: !isPaid,
+                              method: !isPaid ? 'PIX' : undefined,
+                            })}
+                          >
+                            {isPaid
+                              ? <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+                              : <Circle className="h-5 w-5 text-muted-foreground" />}
+                          </button>
+                          <div>
+                            <p className="text-sm font-medium">Parcela {inst.number}</p>
+                            <p className="text-xs text-muted-foreground">
+                              Venc: {formatDate(new Date(inst.dueDate))}
+                              {isPaid && inst.paidAt && ` · Pago em ${formatDate(new Date(inst.paidAt))}`}
+                              {isPaid && inst.method && ` · ${METHOD_LABELS[inst.method] ?? inst.method}`}
+                            </p>
+                          </div>
+                        </div>
+                        <span className={cn('text-sm font-semibold tabular-nums', isPaid && 'text-green-700 dark:text-green-400')}>
+                          {formatBRL(inst.amount)}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">Nenhum parcelamento criado.</p>
+              )}
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      {/* Create installment dialog */}
+      <Dialog
+        open={!!installmentDialogInvoice}
+        onOpenChange={(open) => { if (!open) setInstallmentDialogInvoice(null) }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Criar Parcelamento</DialogTitle>
+          </DialogHeader>
+          {installmentDialogInvoice && (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Fatura de <strong>{formatBRL(installmentDialogInvoice.totalAmount)}</strong>.
+                {installmentsData && installmentsData.length > 0 && (
+                  <span className="text-amber-600 ml-1">O parcelamento atual será substituído.</span>
+                )}
+              </p>
+              <div className="space-y-2">
+                <Label>Número de parcelas</Label>
+                <Select value={installCount} onValueChange={setInstallCount}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 11 }, (_, i) => i + 2).map((n) => {
+                      const amount = installmentDialogInvoice.totalAmount / n
+                      return (
+                        <SelectItem key={n} value={String(n)}>
+                          {n}x de {formatBRL(amount)}
+                        </SelectItem>
+                      )
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Primeira parcela</Label>
+                <Input
+                  type="date"
+                  value={installStartDate}
+                  onChange={(e) => setInstallStartDate(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setInstallmentDialogInvoice(null)}>Cancelar</Button>
+            <Button
+              disabled={createInstallments.isPending}
+              onClick={() => {
+                if (!installmentDialogInvoice) return
+                createInstallments.mutate({
+                  invoiceId: installmentDialogInvoice.id,
+                  count: parseInt(installCount, 10),
+                  startDate: installStartDate,
+                })
+              }}
+            >
+              {createInstallments.isPending ? 'Salvando...' : 'Criar parcelamento'}
             </Button>
           </DialogFooter>
         </DialogContent>

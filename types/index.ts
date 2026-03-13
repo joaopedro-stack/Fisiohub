@@ -91,6 +91,7 @@ export interface Appointment {
   paymentStatus: PaymentStatus
   paymentMethod?: PaymentMethod | null
   paymentValue?: number | null
+  invoiceId?: string | null
   createdAt: Date
   updatedAt: Date
   patient?: Patient

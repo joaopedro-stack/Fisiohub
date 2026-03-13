@@ -7,13 +7,14 @@ import {
   eachDayOfInterval, isSameDay, isSameMonth, addMonths, subMonths,
 } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { ChevronLeft, ChevronRight, Plus, Clock, MapPin, User, CalendarDays, ChevronDown } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Clock, MapPin, User, CalendarDays, ChevronDown, CreditCard } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { AppointmentForm } from './appointment-form'
+import { AppointmentPaymentDialog } from './appointment-payment-dialog'
 import { useCurrentUser } from '@/hooks/use-tenant'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -80,6 +81,20 @@ const TYPE_LABELS: Record<string, string> = {
 
 const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 
+/* ─── Payment status dot ─────────────────────────────────────── */
+const PAYMENT_DOT: Record<string, string> = {
+  PAID:      'bg-emerald-500',
+  PENDING:   'bg-amber-400',
+  INSURANCE: 'bg-blue-400',
+  WAIVED:    'bg-muted-foreground/40',
+}
+const PAYMENT_LABEL: Record<string, string> = {
+  PAID:      'Pago',
+  PENDING:   'Pendente',
+  INSURANCE: 'Convênio',
+  WAIVED:    'Isento',
+}
+
 /* ─── Appointment card inside DayModal ──────────────────────── */
 function AppointmentCard({
   appt,
@@ -95,6 +110,9 @@ function AppointmentCard({
   onStatusChanged: () => void
 }) {
   const [showConfirm, setShowConfirm] = useState(false)
+  const [showPayment, setShowPayment] = useState(false)
+  const { user } = useCurrentUser()
+  const canPay = user?.role === 'ADMIN' || user?.role === 'RECEPTIONIST'
 
   const { mutate: deleteAppt, isPending } = useMutation({
     mutationFn: async () => {
@@ -152,6 +170,23 @@ function AppointmentCard({
             </span>
           </div>
           <div className="flex items-center gap-1">
+            {/* Payment indicator */}
+            {appt.status !== 'CANCELLED' && (
+              <span
+                className={cn(
+                  'flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full border bg-background/70',
+                  appt.paymentStatus === 'PAID'
+                    ? 'text-emerald-700 dark:text-emerald-400 border-emerald-300/60'
+                    : appt.paymentStatus === 'INSURANCE'
+                      ? 'text-blue-600 dark:text-blue-400 border-blue-300/60'
+                      : 'text-muted-foreground border-muted',
+                )}
+                title={PAYMENT_LABEL[appt.paymentStatus] ?? appt.paymentStatus}
+              >
+                <span className={cn('h-1.5 w-1.5 rounded-full', PAYMENT_DOT[appt.paymentStatus] ?? 'bg-muted-foreground/40')} />
+                {PAYMENT_LABEL[appt.paymentStatus] ?? appt.paymentStatus}
+              </span>
+            )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
@@ -177,6 +212,15 @@ function AppointmentCard({
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
+            {canPay && appt.status !== 'CANCELLED' && appt.status !== 'NO_SHOW' && (
+              <button
+                className="h-6 w-6 rounded flex items-center justify-center text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-colors"
+                title="Registrar pagamento"
+                onClick={(e) => { e.stopPropagation(); setShowPayment(true) }}
+              >
+                <CreditCard className="h-3.5 w-3.5" />
+              </button>
+            )}
             {appt.status !== 'NO_SHOW' && (
               <SessionButton
                 appointmentId={appt.id}
@@ -225,6 +269,17 @@ function AppointmentCard({
         title="Excluir agendamento"
         description={`Tem certeza que deseja excluir o agendamento de ${appt.patient?.name ?? 'paciente'}? Esta ação não pode ser desfeita.`}
       />
+
+      {showPayment && (
+        <AppointmentPaymentDialog
+          appointment={appt}
+          open={showPayment}
+          onOpenChange={(open) => {
+            setShowPayment(open)
+            if (!open) onStatusChanged()
+          }}
+        />
+      )}
     </>
   )
 }

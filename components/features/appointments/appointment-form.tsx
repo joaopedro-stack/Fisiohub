@@ -17,6 +17,14 @@ import {
 import { useCurrentUser } from '@/hooks/use-tenant'
 import type { Appointment, Patient, User, ClinicSettings, Room } from '@/types'
 
+interface PriceEntry {
+  id: string
+  name: string
+  type: string | null
+  price: number
+  isActive: boolean
+}
+
 function isBusy(
   slotMinutes: number,
   durationMinutes: number,
@@ -137,6 +145,11 @@ export function AppointmentForm({ appointment, defaultDate, onSuccess }: Appoint
     },
   })
 
+  const { data: priceTable = [] } = useQuery<PriceEntry[]>({
+    queryKey: ['price-table'],
+    queryFn: () => fetch('/api/price-table').then((r) => r.json()),
+  })
+
   const { data: settings } = useQuery<ClinicSettings>({
     queryKey: ['clinic-settings'],
     queryFn: async () => {
@@ -183,6 +196,7 @@ export function AppointmentForm({ appointment, defaultDate, onSuccess }: Appoint
   })
 
   const type = watch('type')
+  const paymentValueWatch = watch('paymentValue')
   const patientId = watch('patientId')
   const physiotherapistId = watch('physiotherapistId')
   const startSlot = watch('startSlot')
@@ -227,6 +241,23 @@ export function AppointmentForm({ appointment, defaultDate, onSuccess }: Appoint
       return !busyForPhysio && !busyForRoom
     })
   }, [timeSlots, physioAppointments, roomAppointments, sessionDuration, appointment?.id])
+
+  // Auto-fill paymentValue from PriceTable when type changes (only if field is empty)
+  useEffect(() => {
+    if (!type || !priceTable.length) return
+    const match = priceTable.find((e) => e.isActive && e.type === type)
+    if (match && !paymentValueWatch) {
+      setValue('paymentValue', String(match.price))
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [type, priceTable])
+
+  // When paymentStatus = INSURANCE, force paymentMethod = INSURANCE
+  useEffect(() => {
+    if (paymentStatus === 'INSURANCE') {
+      setValue('paymentMethod', 'INSURANCE')
+    }
+  }, [paymentStatus, setValue])
 
   // Auto-assign physiotherapist for PHYSIOTHERAPIST role
   useEffect(() => {

@@ -6,7 +6,11 @@
     },
     {
       "path": "/api/cron/generate-expenses",
-      "schedule": "0 8 1 * *"
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/apply-plan-changes",
+      "schedule": "0 6 * * *"
     }
   ]
 }

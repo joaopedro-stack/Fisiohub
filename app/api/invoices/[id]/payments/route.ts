@@ -38,6 +38,9 @@ export async function POST(
   if ((invoice.status as string) === 'CANCELED') {
     return NextResponse.json({ error: 'Cannot add payment to a canceled invoice' }, { status: 409 })
   }
+  if (parsed.data.method === 'INSURANCE' && !(invoice as unknown as { isInsurance: boolean }).isInsurance) {
+    return NextResponse.json({ error: 'Pagamento por convênio só é permitido em faturas de convênio' }, { status: 422 })
+  }
 
   const payment = await prisma.payment.create({
     data: {
