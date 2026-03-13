@@ -32,9 +32,11 @@ export async function GET(
   }) | null
   if (!invoice) return NextResponse.json({ error: 'Invoice not found' }, { status: 404 })
 
-  const installments = await (prisma.installment as unknown as {
-    findMany: (args: unknown) => Promise<{ id: string; number: number; amount: number; dueDate: Date; paidAt: Date | null; method: string | null }[]>
-  }).findMany({ where: { invoiceId }, orderBy: { number: 'asc' } })
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const installments = await (prisma as unknown as any).installment.findMany({
+    where: { invoiceId },
+    orderBy: { number: 'asc' },
+  }) as { id: string; number: number; amount: number; dueDate: Date; paidAt: Date | null; method: string | null }[]
 
   const paidSum = invoice.payments.filter((p) => !p.isRefund).reduce((s, p) => s + Number(p.amount), 0)
   const refundSum = invoice.payments.filter((p) => p.isRefund).reduce((s, p) => s + Number(p.amount), 0)
