@@ -83,7 +83,7 @@ const patientSchema = z.object({
     'CPF inválido',
   ),
   birthDate:         z.string().optional(),
-  gender:            z.enum(['MALE', 'FEMALE', 'OTHER'], { required_error: 'Gênero é obrigatório' }),
+  gender:            z.enum(['MALE', 'FEMALE', 'OTHER'], { message: 'Gênero é obrigatório' }),
   cep:               z.string().optional(),
   address:           z.string().optional(),
   healthInsurance:   z.string().min(1, 'Plano de saúde é obrigatório'),
