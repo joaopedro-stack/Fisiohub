@@ -34,6 +34,10 @@ export async function createAppointmentPayment(
     throw new Error('Não é possível registrar pagamento para consulta cancelada ou faltante')
   }
 
+  if ((appt as unknown as { paymentStatus: string }).paymentStatus === 'PAID') {
+    throw new Error('Esta consulta já foi paga')
+  }
+
   return await (prisma as unknown as { $transaction: (fn: (tx: TenantPrisma) => Promise<unknown>) => Promise<unknown> })
     .$transaction(async (tx: TenantPrisma) => {
       let invoiceId = appt.invoiceId
@@ -79,6 +83,7 @@ export async function createAppointmentPayment(
       const inv = invoice as { id: string; status: string; totalAmount: unknown; payments: { amount: unknown; isRefund: boolean }[] }
 
       if (inv.status === 'CANCELED') throw new Error('A fatura vinculada está cancelada')
+      if (inv.status === 'PAID') throw new Error('Esta fatura já está integralmente paga')
 
       const payment = await tx.payment.create({
         data: {

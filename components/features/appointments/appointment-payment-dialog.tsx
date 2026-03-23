@@ -127,7 +127,9 @@ export function AppointmentPaymentDialog({ appointment, open, onOpenChange }: Pr
   })
 
   const remaining = invoice ? invoice.totalAmount - invoice.netPaid : parseFloat(amount) || 0
-  const isAlreadyPaid = invoice?.status === 'PAID'
+  // Use appointment.paymentStatus as the primary guard (available immediately, no loading required)
+  const apptPaymentStatus = (appointment as unknown as { paymentStatus?: string }).paymentStatus
+  const isAlreadyPaid = apptPaymentStatus === 'PAID' || apptPaymentStatus === 'WAIVED' || invoice?.status === 'PAID'
 
   return (
     <>
@@ -238,7 +240,7 @@ export function AppointmentPaymentDialog({ appointment, open, onOpenChange }: Pr
             <Button variant="outline" onClick={() => onOpenChange(false)}>Fechar</Button>
             {!isAlreadyPaid && (
               <Button
-                disabled={!amount || parseFloat(amount) <= 0 || payMutation.isPending}
+                disabled={!amount || parseFloat(amount) <= 0 || payMutation.isPending || invoiceLoading}
                 onClick={() => payMutation.mutate()}
               >
                 {payMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
