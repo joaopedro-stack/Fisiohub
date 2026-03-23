@@ -96,6 +96,7 @@ export async function provisionTenant(slug: string): Promise<void> {
         "cpf" TEXT,
         "birthDate" TIMESTAMP(3),
         "gender" "${schemaName}"."Gender",
+        "cep" TEXT,
         "address" TEXT,
         "healthInsurance" TEXT,
         "emergencyContact" TEXT,
