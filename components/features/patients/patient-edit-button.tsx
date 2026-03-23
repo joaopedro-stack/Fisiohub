@@ -20,7 +20,7 @@ export function PatientEditButton({ patient }: { patient: Patient }) {
       </Button>
 
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+        <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
           <SheetHeader className="px-6 pt-6">
             <SheetTitle>Editar Paciente</SheetTitle>
           </SheetHeader>

@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Switch } from '@/components/ui/switch'
 import { toast } from 'sonner'
-import { Plus, CheckCircle2, Trash2, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, CheckCircle2, Trash2, ChevronLeft, ChevronRight, Pencil } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
 function formatBRL(value: number) {
@@ -64,6 +64,14 @@ export function ExpensesList() {
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
   const [createOpen, setCreateOpen] = useState(false)
   const [form, setForm] = useState(INITIAL_FORM)
+  const [editOpen, setEditOpen] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editForm, setEditForm] = useState({
+    description: '',
+    category: 'OTHER',
+    amount: '',
+    dueDate: '',
+  })
 
   const statusParam = statusFilter === 'all' ? '' : statusFilter
   const categoryParam = categoryFilter === 'all' ? '' : categoryFilter
@@ -110,6 +118,38 @@ export function ExpensesList() {
     },
     onError: () => toast.error('Erro ao atualizar despesa'),
   })
+
+  const updateExpense = useMutation({
+    mutationFn: ({ id, body }: { id: string; body: typeof editForm }) =>
+      fetch(`/api/expenses/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          description: body.description,
+          category: body.category,
+          amount: parseFloat(body.amount),
+          dueDate: body.dueDate,
+        }),
+      }).then((r) => r.json()),
+    onSuccess: () => {
+      toast.success('Despesa atualizada')
+      queryClient.invalidateQueries({ queryKey: ['expenses'] })
+      setEditOpen(false)
+      setEditingId(null)
+    },
+    onError: () => toast.error('Erro ao atualizar despesa'),
+  })
+
+  function openEdit(exp: Expense) {
+    setEditingId(exp.id)
+    setEditForm({
+      description: exp.description,
+      category: exp.category,
+      amount: String(exp.amount),
+      dueDate: exp.dueDate.slice(0, 10),
+    })
+    setEditOpen(true)
+  }
 
   const deleteExpense = useMutation({
     mutationFn: (id: string) =>
@@ -219,6 +259,14 @@ export function ExpensesList() {
                           <Button
                             size="sm"
                             variant="ghost"
+                            title="Editar"
+                            onClick={() => openEdit(exp)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
                             className="text-destructive hover:text-destructive"
                             onClick={() => deleteExpense.mutate(exp.id)}
                             disabled={deleteExpense.isPending}
@@ -248,6 +296,66 @@ export function ExpensesList() {
           </Button>
         </div>
       )}
+
+      {/* Edit dialog */}
+      <Dialog open={editOpen} onOpenChange={(v) => { setEditOpen(v); if (!v) setEditingId(null) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Despesa</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Descrição</Label>
+              <Input
+                value={editForm.description}
+                onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))}
+                placeholder="Ex: Aluguel sala"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Categoria</Label>
+                <Select value={editForm.category} onValueChange={(v) => setEditForm((f) => ({ ...f, category: v }))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(CATEGORY_LABELS).map(([k, v]) => (
+                      <SelectItem key={k} value={k}>{v}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Valor (R$)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={editForm.amount}
+                  onChange={(e) => setEditForm((f) => ({ ...f, amount: e.target.value }))}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Data de Vencimento</Label>
+              <Input
+                type="date"
+                value={editForm.dueDate}
+                onChange={(e) => setEditForm((f) => ({ ...f, dueDate: e.target.value }))}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setEditOpen(false); setEditingId(null) }}>Cancelar</Button>
+            <Button
+              disabled={!editForm.description || !editForm.amount || !editForm.dueDate || updateExpense.isPending}
+              onClick={() => editingId && updateExpense.mutate({ id: editingId, body: editForm })}
+            >
+              {updateExpense.isPending ? 'Salvando...' : 'Salvar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Create dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>

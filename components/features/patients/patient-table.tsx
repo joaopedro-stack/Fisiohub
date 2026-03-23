@@ -227,11 +227,11 @@ export function PatientTable() {
       )}
 
       <Sheet open={showForm} onOpenChange={setShowForm}>
-        <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
-          <SheetHeader>
+        <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
+          <SheetHeader className="px-6 pt-6">
             <SheetTitle>{editPatient ? 'Editar Paciente' : 'Novo Paciente'}</SheetTitle>
           </SheetHeader>
-          <div className="mt-4">
+          <div className="px-6 pb-8 mt-4">
             <PatientForm
               patient={editPatient}
               onSuccess={() => {

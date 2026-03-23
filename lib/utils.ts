@@ -7,8 +7,19 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+/** Para campos de data pura (dueDate, birthDate etc.) salvos como UTC midnight,
+ *  reconstrói a data usando os componentes UTC para evitar que o offset UTC-3
+ *  desloque o dia para trás no browser brasileiro. */
+function toLocalDate(date: Date | string): Date {
+  const d = new Date(date)
+  if (d.getUTCHours() === 0 && d.getUTCMinutes() === 0 && d.getUTCSeconds() === 0) {
+    return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())
+  }
+  return d
+}
+
 export function formatDate(date: Date | string, pattern = "dd/MM/yyyy") {
-  return format(new Date(date), pattern, { locale: ptBR })
+  return format(toLocalDate(date), pattern, { locale: ptBR })
 }
 
 export function formatDateTime(date: Date | string) {
